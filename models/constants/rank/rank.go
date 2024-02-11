@@ -19,3 +19,9 @@ const (
 	REVERSE Rank = "reverse"
 	SKIP    Rank = "skip"
 )
+
+var NumberCards = []Rank{ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE}
+
+var ActionCards = []Rank{DRAW_2, REVERSE, SKIP}
+
+var ActionCardsNoColor = []Rank{WILD, DRAW_4}

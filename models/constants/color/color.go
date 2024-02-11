@@ -8,3 +8,7 @@ const (
 	GREEN  Color = "green"
 	YELLOW Color = "yellow"
 )
+
+var ALLColors = []Color{
+	RED, BLUE, GREEN, YELLOW,
+}
