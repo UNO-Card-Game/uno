@@ -26,12 +26,25 @@ func (gd *GameDeck) initColoredCards() {
 		}
 		for _, r := range rank.ActionCards {
 			gd.AddCard(Card{Color: c, Rank: r})
+			gd.AddCard(Card{Color: c, Rank: r})
 		}
 	}
 }
 
 func (gd *GameDeck) initNonColoredCards() {
-	for _, r := range rank.ActionCardsNoColor {
-		gd.AddCard(Card{Color: "", Rank: r})
+	for range [4]struct{}{} {
+		for _, r := range rank.ActionCardsNoColor {
+			gd.AddCard(Card{Color: "", Rank: r})
+		}
 	}
+}
+
+func (gd *GameDeck) Cut(n int) []Card {
+	if n <= 0 || n > len(gd.Cards) {
+		// If n is invalid, return an empty slice
+		return []Card{}
+	}
+	cutCards := gd.Cards[:n]
+	gd.Cards = gd.Cards[n:] // Remove the cut cards from the deck
+	return cutCards
 }

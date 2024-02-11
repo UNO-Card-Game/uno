@@ -38,3 +38,7 @@ func (d *Deck) RemoveCard(index int) Card {
 	d.Counter[card.Type()]--
 	return card
 }
+
+func (d *Deck) NumberOfCards() int {
+	return len(d.Cards)
+}

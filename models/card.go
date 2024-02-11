@@ -18,3 +18,7 @@ func (c Card) Type() string {
 	}
 	return "action-card"
 }
+
+func (c Card) logCard() string {
+	return string(c.Rank) + " " + string(c.Color)
+}
