@@ -3,14 +3,22 @@ package main
 import (
 	"fmt"
 	"github.com/AvikantSrivastava/uno/models"
-	"github.com/AvikantSrivastava/uno/models/constants/rank"
 )
 
 func main() {
-	fmt.Println("welcome to the UNO game")
-	card := models.Card{
-		Rank: rank.WILD,
-		//Color: color.BLUE,
-	}
-	fmt.Println(card.Type())
+	var gameDeck = models.NewGameDeck()
+	var player1 = models.NewPlayer("Player 1")
+	var player2 = models.NewPlayer("Player 2")
+
+	fmt.Println("Total cards in the deck before:", gameDeck.NumberOfCards())
+
+	var set1 = gameDeck.Cut(5)
+	var set2 = gameDeck.Cut(9)
+
+	player1.AddCards(set1)
+	player2.AddCards(set2)
+
+	player1.CardInHand()
+	player2.CardInHand()
+
 }
