@@ -14,7 +14,7 @@ func (c Card) Type() string {
 	if c.Rank >= "0" && c.Rank <= "9" {
 		return "number-card"
 	} else if c.Rank == rank.WILD || c.Rank == rank.DRAW_4 {
-		return "action-card-no-constants"
+		return "action-card-no-color"
 	}
 	return "action-card"
 }
