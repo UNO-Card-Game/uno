@@ -18,7 +18,7 @@ func NewPlayer(name string) *Player {
 func (player *Player) CardInHand() {
 	fmt.Println(player.Name, "has")
 	for i, c := range player.Deck.Cards {
-		fmt.Println("Card", i, ":\t", c.logCard())
+		fmt.Println("Card", i, ":\t", c.LogCard())
 	}
 }
 

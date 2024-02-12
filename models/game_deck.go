@@ -48,3 +48,7 @@ func (gd *GameDeck) Cut(n int) []Card {
 	gd.Cards = gd.Cards[n:] // Remove the cut cards from the deck
 	return cutCards
 }
+
+func (gd *GameDeck) TopCard() *Card {
+	return &gd.Cards[0]
+}
