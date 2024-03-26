@@ -111,21 +111,22 @@ func (g *Game) PlayCard(player *models.Player, cardIdx int) { // Reason why it '
 		player.Send("Invalid move. Try again. or Wrong player")
 	}
 }
-func (g *Game) IsValidMove(playedcard models.Card, player *models.Player) bool {
-	if g.GameFirstMove {
-		g.GameFirstMove = false //First card will not check deck's top card
+func (g *Game) IsValidMove(playedCard models.Card, player *models.Player) bool {
+	// Check if it's the first move of the game and the player is active
+	if g.GameFirstMove && player == g.ActivePlayer {
+		g.GameFirstMove = false // First card will not check deck's top card
 		return true
 	}
-	GameTopCard := g.GameTopCard
-	if playedcard.IsSameColor(*GameTopCard) || playedcard.IsSameRank(*GameTopCard) {
-		return true
-	}
+
+	// If it's not the active player's turn, disallow move
 	if player != g.ActivePlayer {
 		return false
 	}
 
-	return false
+	// If the played card matches the color or rank of the top card, it's a valid move
+	return playedCard.IsSameColor(*g.GameTopCard) || playedCard.IsSameRank(*g.GameTopCard)
 }
+
 func (g *Game) HandleMessage(msg string, conn *websocket.Conn, clientName string) {
 	parts := strings.Split(msg, " ")
 	command := parts[0]
