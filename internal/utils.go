@@ -44,12 +44,16 @@ func removeCardFromHand(hand []models.Card, card models.Card) []models.Card {
 	return hand
 }
 
-// performDraw2Action performs the Draw2 action
-func (g *Game) performDraw2Action(player *models.Player) {
+func (g *Game) PerformDrawAction(card_count int) {
+
 	nextPlayer := g.getNextPlayer()
-	cardsDrawn := g.GameDeck.Cut(2)
+	cardsDrawn := g.GameDeck.Cut(card_count)
 	nextPlayer.AddCards(cardsDrawn)
-	nextPlayer.Send(fmt.Sprintf("Drew 2 cards due to %s's Draw2 action", player.Name))
+	for _, card := range cardsDrawn {
+		nextPlayer.Send(fmt.Sprintf("Drew %s", card.LogCard()))
+	}
+	nextPlayer.Send(fmt.Sprintf("Drew %d cards  ", card_count))
+
 }
 func (g *Game) ShuffleDiscardPileToDeck() {
 	if len(g.DisposedGameDeck.Deck.Cards) > 0 {
@@ -75,8 +79,10 @@ func (g *Game) reverseGameDirection() {
 
 // skipNextTurn skips the next player's turn
 func (g *Game) skipNextTurn() {
+	nextPlayer := g.getNextPlayer()
+	nextPlayer.Send("Your turn is SKIPPED.......... ")
+
 	g.NextTurn()
-	g.ActivePlayer.Send("Your turn was skipped")
 }
 
 // declareWinner declares the winner of the game
@@ -84,12 +90,43 @@ func (g *Game) declareWinner(winner *models.Player) {
 	for _, p := range g.Players {
 		p.Send(fmt.Sprintf("%s has won the game!", winner.Name))
 	}
+	for _, p := range g.Players {
+		p.CloseConnection()
+	}
+	// Perform any necessary  end-game animation with bubbleTea
+}
+func (g *Game) checkforUNO(player *models.Player) {
+	for _, p := range g.Players {
+		p.Send(fmt.Sprintf("UNO !!!! by %s ", player.Name))
+	}
 	// Perform any necessary  end-game animation with bubbleTea
 }
 
 // getNextPlayer returns the next player based on the game direction
 func (g *Game) getNextPlayer() *models.Player {
 	integerDirection := convertDirectionToInteger(g.GameDirection)
+
 	nextTurn := (g.CurrentTurn + integerDirection) % len(g.Players)
+	if nextTurn < 0 {
+		nextTurn += len(g.Players)
+		return g.Players[nextTurn]
+	}
 	return g.Players[nextTurn]
+}
+func (g *Game) dealwithActionCards(card models.Card) {
+	cardType := card.Rank
+	switch cardType {
+	case "skip":
+		g.skipNextTurn()
+		break
+	case "draw_2":
+		g.PerformDrawAction(2)
+		break
+	case "reverse":
+		g.reverseGameDirection()
+		break
+	default:
+		// Handle unexpected card types here, e.g., log an error
+		fmt.Println("Unexpected card type:", cardType)
+	}
 }
