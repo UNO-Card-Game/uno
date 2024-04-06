@@ -21,24 +21,45 @@ var (
 	broadcast   = make(chan string)
 	gameStarted = false
 	mutex       sync.Mutex // Mutex to synchronize writes to websocket connections
+	// wg          sync.WaitGroup
+	// goroutines  []func()
 )
 
 func broadcastMessages() {
+
 	for {
 		select {
 		case message := <-broadcast:
 			for client, _ := range clients {
 				// Use a mutex to synchronize writes to the websocket connection
 				mutex.Lock()
-				if err := client.WriteMessage(websocket.TextMessage, []byte(": "+message)); err != nil {
-					fmt.Println("Error writing message to client:", err)
+				err := client.WriteMessage(websocket.TextMessage, []byte(": "+message))
+				if err != nil {
+					if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+						fmt.Printf("Error writing message to client : %v\n", err)
+						client.Close()
+						delete(clients, client)
+					} else {
+						fmt.Println("Error writing message to client:", err)
+					}
 				}
 				mutex.Unlock()
 			}
 		}
 	}
+
 }
 
+// func handleInterruptSignal(game *internal.Game) {
+// 	c := make(chan os.Signal, 1)
+// 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+// 	<-c
+// 	fmt.Println("\nReceived interrupt signal. Closing all goroutines...")
+
+// 	// Perform cleanup tasks here if needed
+
+//		os.Exit(0)
+//	}
 func handleConnections(w http.ResponseWriter, r *http.Request, game *internal.Game) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -99,7 +120,7 @@ func handleConnections(w http.ResponseWriter, r *http.Request, game *internal.Ga
 			return
 		}
 	}
-	go broadcastMessages()
+	//go broadcastMessages()
 
 	for {
 		// Read message from browser/terminal
@@ -131,10 +152,13 @@ func handleConnections(w http.ResponseWriter, r *http.Request, game *internal.Ga
 
 func main() {
 	game := internal.NewGame(players)
+	// go handleInterruptSignal(game)
+	go broadcastMessages()
+
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		handleConnections(w, r, game)
 	})
-
+	//internal.HandleInterruptSignal(&wg, goroutines...) //On pressing CTRL/CMD +C to terminate server ,it will close go routines too
 	fmt.Println("Server started on :8080")
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {

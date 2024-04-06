@@ -50,9 +50,9 @@ func (g *Game) PerformDrawAction(card_count int) {
 	cardsDrawn := g.GameDeck.Cut(card_count)
 	nextPlayer.AddCards(cardsDrawn)
 	for _, card := range cardsDrawn {
-		nextPlayer.Send(fmt.Sprintf("Drew %s", card.LogCard()))
+		nextPlayer.Send(fmt.Sprintf("%s Drew %s", nextPlayer.Name, card.LogCard()))
 	}
-	nextPlayer.Send(fmt.Sprintf("Drew %d cards  ", card_count))
+	nextPlayer.Send(fmt.Sprintf("%s Drew Drew %d cards  ", nextPlayer.Name, card_count))
 
 }
 func (g *Game) ShuffleDiscardPileToDeck() {
@@ -82,15 +82,16 @@ func (g *Game) skipNextTurn() {
 	nextPlayer := g.getNextPlayer()
 	nextPlayer.Send("Your turn is SKIPPED.......... ")
 
-	g.NextTurn()
+	g.swtichtoNextPlayer()
 }
 
 // declareWinner declares the winner of the game
 func (g *Game) declareWinner(winner *models.Player) {
 	for _, p := range g.Players {
-		p.Send(fmt.Sprintf("%s has won the game!", winner.Name))
+		p.Send(fmt.Sprintf("%s HAS WON THE GAME!!!!", winner.Name))
 	}
 	for _, p := range g.Players {
+		p.Send(fmt.Sprintf("GAME OVER  %s ,CLOSING CONNECTION ", winner.Name))
 		p.CloseConnection()
 	}
 	// Perform any necessary  end-game animation with bubbleTea
@@ -109,7 +110,7 @@ func (g *Game) getNextPlayer() *models.Player {
 	nextTurn := (g.CurrentTurn + integerDirection) % len(g.Players)
 	if nextTurn < 0 {
 		nextTurn += len(g.Players)
-		return g.Players[nextTurn]
+
 	}
 	return g.Players[nextTurn]
 }
@@ -128,5 +129,14 @@ func (g *Game) dealwithActionCards(card models.Card) {
 	default:
 		// Handle unexpected card types here, e.g., log an error
 		fmt.Println("Unexpected card type:", cardType)
+	}
+}
+
+func (g *Game) swtichtoNextPlayer() {
+	integerDirection := convertDirectionToInteger(g.GameDirection)
+	g.CurrentTurn = (g.CurrentTurn + integerDirection) % len(g.Players)
+	if g.CurrentTurn < 0 {
+		g.CurrentTurn += len(g.Players)
+
 	}
 }

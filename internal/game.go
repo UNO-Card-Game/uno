@@ -51,10 +51,9 @@ func NewGame(playerNames []string) *Game {
 func (g *Game) NextTurn() {
 	// g.ActivePlayer.mu.Lock()
 	// defer g.ActivePlayer.mu.Unlock()
-
-	if g.ActivePlayer != nil {
-
-		g.ActivePlayer.Send("Your turn is over.")
+	//check for Game winner
+	if g.ActivePlayer.Deck.NumberOfCards() == 0 {
+		g.declareWinner(g.ActivePlayer)
 	}
 	//Check for UNO
 	if g.ActivePlayer.Deck.NumberOfCards() == 1 {
@@ -69,7 +68,7 @@ func (g *Game) NextTurn() {
 	}
 
 	nextPlayer := g.Players[nextTurn]
-	nextPlayer.Send("About TO DRAWWWWWW CARDSSSS")
+	//nextPlayer.Send("About TO DRAWWWWWW CARDSSSS")
 	topCard := g.GameTopCard
 	playableCard := nextPlayer.HasPlayableCard(topCard)
 	if !playableCard {
@@ -79,8 +78,16 @@ func (g *Game) NextTurn() {
 			g.ShuffleDiscardPileToDeck()
 		}
 		g.PerformDrawAction(1) //Draw 1 card
-		g.NextTurn()           // Call NextTurn again to move to the next player
-		return
+		playableCard = nextPlayer.HasPlayableCard(topCard)
+
+		// If the player still doesn't have a playable card after drawing, skip their turn
+		if !playableCard {
+			nextPlayer.Send("You don't have a playable card")
+			g.skipNextTurn()
+			g.NextTurn() // Call NextTurn again to move to the next player
+			return
+		}
+
 	}
 	g.CurrentTurn = nextTurn
 	g.ActivePlayer = g.Players[g.CurrentTurn]
@@ -140,10 +147,7 @@ func (g *Game) PlayCard(player *models.Player, cardIdx int, newColorStr ...strin
 				g.skipNextTurn()
 
 			}
-			// Notify all players about the played card and the new color
-
-			// Move to the next turn
-			//ACTION CARD CANNOT BE LAST PLAYABLE CARD ,Hence not checking for winner
+			player.Send("Your turn is over.")
 			g.NextTurn()
 		} else {
 			player.Send("Invalid move.Add New Color to WILD or DRAW_4 in format playcard <cardIndex> <color>. Try again !!")
@@ -152,7 +156,6 @@ func (g *Game) PlayCard(player *models.Player, cardIdx int, newColorStr ...strin
 
 	} else if g.IsValidMove(card, player) { //Check if valid move
 		// Perform game logic for playing the card
-		// Update game state, check for UNO, etc.
 
 		// Notify all players about the played card
 		if card.Type() == "action-card" {
@@ -168,6 +171,7 @@ func (g *Game) PlayCard(player *models.Player, cardIdx int, newColorStr ...strin
 		g.GameTopCard = &disposedCard
 
 		// Move to the next turn
+		player.Send("Your turn is over.")
 		g.NextTurn()
 	} else {
 		// Notify the player that the move is invalid
