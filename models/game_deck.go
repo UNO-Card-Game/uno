@@ -1,8 +1,9 @@
 package models
 
 import (
-	color "github.com/AvikantSrivastava/uno/models/constants/color"
-	rank "github.com/AvikantSrivastava/uno/models/constants/rank"
+	"errors"
+	color "uno/models/constants/color"
+	rank "uno/models/constants/rank"
 )
 
 type GameDeck struct {
@@ -22,8 +23,15 @@ func NewGameDeck() *GameDeck {
 func (gd *GameDeck) initColoredCards() {
 	for _, c := range color.ALLColors {
 		for _, r := range rank.NumberCards {
-			gd.AddCard(Card{Color: c, Rank: r})
+			if r == "0" {
+				gd.AddCard(Card{Color: c, Rank: r})
+			} else {
+				gd.AddCard(Card{Color: c, Rank: r})
+				gd.AddCard(Card{Color: c, Rank: r})
+			}
+
 		}
+
 		for _, r := range rank.ActionCards {
 			gd.AddCard(Card{Color: c, Rank: r})
 			gd.AddCard(Card{Color: c, Rank: r})
@@ -49,6 +57,10 @@ func (gd *GameDeck) Cut(n int) []Card {
 	return cutCards
 }
 
-func (gd *GameDeck) TopCard() *Card {
-	return &gd.Cards[0]
+func (gd *GameDeck) TopCard() (*Card, error) {
+	if len(gd.Cards) == 0 {
+		return nil, errors.New("game deck is empty")
+	}
+	topCard := gd.Cards[0]
+	return &topCard, nil
 }
