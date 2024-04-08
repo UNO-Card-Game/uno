@@ -5,6 +5,13 @@
 
 This guide provides step-by-step instructions to set up and run the Uno game.
 
+# Installation
+## Install [Task](https://taskfile.dev/installation/)
+### Mac OS
+```bash
+brew install go-task
+```
+
 ## Step 1: Define Player Names
 
 Open the `main.go` file and define player names in the `players` slice.

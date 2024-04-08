@@ -1,0 +1,13 @@
+
+version: '3'
+
+tasks:
+  build:server:
+    desc: "Build the server binary"
+    cmds:
+      - go build -o bin/server cmd/uno/main.go
+
+  run:server:
+    desc: "Run the server"
+    cmds:
+      - bin/server
