@@ -20,14 +20,12 @@ Open the `main.go` file and define player names in the `players` slice.
 // Example:
 // players := []string{"Player1", "Player2", "Player3"}
 ```
-## Step 2: Run the Uno Game
-
-1. Navigate to the `cmd/uno` directory.
-2. Run the `main.go` file.
-
+## Step 2: Build and run the server 
 ```bash
-cd cmd/uno
-go run main.go
+task build:server
+```
+```bash
+task run:server
 ```
 ## Step 3: Connect to the Server
 Install wscat package </br>
