@@ -5,6 +5,13 @@
 
 This guide provides step-by-step instructions to set up and run the Uno game.
 
+# Installation
+## Install [Task](https://taskfile.dev/installation/)
+### Mac OS
+```bash
+brew install go-task
+```
+
 ## Step 1: Define Player Names
 
 Open the `main.go` file and define player names in the `players` slice.
@@ -13,14 +20,12 @@ Open the `main.go` file and define player names in the `players` slice.
 // Example:
 // players := []string{"Player1", "Player2", "Player3"}
 ```
-## Step 2: Run the Uno Game
-
-1. Navigate to the `cmd/uno` directory.
-2. Run the `main.go` file.
-
+## Step 2: Build and run the server 
 ```bash
-cd cmd/uno
-go run main.go
+task build:server
+```
+```bash
+task run:server
 ```
 ## Step 3: Connect to the Server
 Install wscat package </br>
