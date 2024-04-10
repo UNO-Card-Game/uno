@@ -1,13 +1,22 @@
-
 version: '3'
 
 tasks:
   build:server:
     desc: "Build the server binary"
     cmds:
-      - go build -o bin/server cmd/uno/main.go
+      - if [ "$(go env GOOS)" = "windows" ]; then
+        go build -o bin/server.exe cmd/uno/main.go;
+        else
+        go build -o bin/server cmd/uno/main.go;
+        fi
 
   run:server:
     desc: "Run the server"
     cmds:
-      - bin/server
+      - if [ "$(go env GOOS)" = "windows" ]; then
+        bin/server.exe;
+        else
+        bin/server;
+        fi
+    deps:
+      - build:server
