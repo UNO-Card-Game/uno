@@ -22,8 +22,6 @@ tasks:
     deps:
       - build:server
 
-      - bin/main
-
   run:client:
     desc: "Run the client"
     cmds:
