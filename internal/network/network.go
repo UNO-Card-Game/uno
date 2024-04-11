@@ -122,7 +122,6 @@ func HandleConnections(w http.ResponseWriter, r *http.Request, game *internal.Ga
 			gameStarted = true
 
 			game.Start()
-			internal.UNoOLogoPrint()
 			broadcast <- fmt.Sprintf("%s started the game", clientName)
 		}
 
