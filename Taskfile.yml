@@ -1,3 +1,4 @@
+
 version: '3'
 
 tasks:
@@ -5,9 +6,9 @@ tasks:
     desc: "Build the server binary"
     cmds:
       - if [ "$(go env GOOS)" = "windows" ]; then
-        go build -o bin/server.exe cmd/uno/main.go;
+        go build -o bin/server.exe cmd/uno/*.go;
         else
-        go build -o bin/server cmd/uno/main.go;
+        go build -o bin/server cmd/uno/*.go;
         fi
 
   run:server:
@@ -20,3 +21,8 @@ tasks:
         fi
     deps:
       - build:server
+
+  run:client:
+    desc: "Run the client"
+    cmds:
+      - wscat -c ws://localhost:8080/ws
