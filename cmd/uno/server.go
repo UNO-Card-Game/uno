@@ -11,7 +11,7 @@ var players = []string{"p1", "p2"}
 
 func server(port string) {
 	game := internal.NewGame(players)
-	go network.BroadcastMessages(game)
+	go network.BroadcastMessages()
 
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		network.HandleConnections(w, r, game)
