@@ -1,13 +1,20 @@
 
 version: '3'
 
+env:
+  PORT: 8000
 tasks:
   build:server:
     desc: "Build the server binary"
     cmds:
-      - go build -o bin/server cmd/uno/main.go
+      - go build -o bin/ cmd/uno/*.go
 
   run:server:
     desc: "Run the server"
     cmds:
-      - bin/server
+      - bin/main
+
+  run:client:
+    desc: "Run the client"
+    cmds:
+      - wscat -c ws://localhost:8080/ws

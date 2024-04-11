@@ -23,7 +23,7 @@ func (m Model) View() string {
 }
 func UNoOLogoPrint() {
 	//
-	relativePath := "../../assets/UNO_Logo.png"
+	relativePath := "assets/UNO_Logo.png"
 	convertOptions := convert.DefaultOptions
 	convertOptions.FixedWidth = 58
 	convertOptions.FixedHeight = 16
