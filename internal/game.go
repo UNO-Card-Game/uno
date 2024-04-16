@@ -20,7 +20,7 @@ type Game struct {
 	GameDirection    bool
 	ActivePlayer     *models.Player //pointer to active player
 	mu               sync.Mutex
-	GameTopCard      *models.Card //TopCard of Playing Game
+	GameTopCard      *models.Card // Top card of the game
 	GameFirstMove    bool
 }
 
@@ -39,11 +39,14 @@ func NewGame(playerNames []string) *Game {
 			Cards: make([]models.Card, 0), // Initialize the Cards slice
 		},
 	}
+	topcard := &gameDeck.Cut(1)[0]
 
 	game := &Game{
 		Players:          players,
 		GameDeck:         gameDeck,
 		DisposedGameDeck: disposedGameDeck,
+		GameDirection:    false,
+		GameTopCard:      topcard,
 	}
 	return game
 }
@@ -211,35 +214,27 @@ func (g *Game) HandleMessage(msg string, conn *websocket.Conn, clientName string
 		conn.WriteMessage(websocket.TextMessage, []byte("Player not found."))
 		return
 	}
-
-	switch command {
-	case "playcard":
-
+	if command == "sync" {
+		var state = models.SerializeSyncDTO(models.SyncDTO{
+			Player: *playerPtr,
+			Game: models.GameState{
+				Topcard: *g.GameTopCard,
+				Turn:    g.ActivePlayer.Name,
+				Reverse: g.GameDirection,
+			},
+		})
+		conn.WriteMessage(websocket.TextMessage, state)
+	} else if command == "playcard" {
 		if len(parts) < 2 {
 			// Handle invalid command format
-
 			conn.WriteMessage(websocket.TextMessage, []byte("Invalid command format.\n Usage: playcard <cardIndex> and Usage: playcard <cardIndex> <color> for DRAW 4 and WILD"))
 
 		} else if len(parts) == 2 {
 			cardidx, _ := strconv.Atoi(parts[1])
 			g.PlayCard(playerPtr, cardidx)
 			return
-		} else if len(parts) == 3 {
-			cardidx, _ := strconv.Atoi(parts[1])
-			newColor := parts[2]
-
-			g.PlayCard(playerPtr, cardidx, newColor)
-			return
 		}
-		// Call the PlayCard function for the player
-
-	case "showcards":
-		// Call the ShowCards function for the player
-		your_cards := playerPtr.CardInHand()
-		conn.WriteMessage(websocket.TextMessage, []byte(your_cards))
-	case "topcard":
-		conn.WriteMessage(websocket.TextMessage, []byte(g.GameTopCard.LogCard()))
-	default:
-		conn.WriteMessage(websocket.TextMessage, []byte("Chat msg"))
+	} else {
+		conn.WriteMessage(websocket.TextMessage, []byte("Invalid command format"))
 	}
 }
