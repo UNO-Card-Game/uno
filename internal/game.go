@@ -203,6 +203,103 @@ func (g *Game) IsValidMove(playedCard models.Card, player *models.Player) bool {
 	return playedCard.IsSameColor(*g.GameTopCard) || playedCard.IsSameRank(*g.GameTopCard)
 }
 
+func (g *Game) PerformDrawAction(card_count int) {
+
+	nextPlayer := g.getNextPlayer()
+	cardsDrawn := g.GameDeck.Cut(card_count)
+	nextPlayer.AddCards(cardsDrawn)
+	for _, card := range cardsDrawn {
+		nextPlayer.Send(fmt.Sprintf("%s Drew %s", nextPlayer.Name, card.LogCard()))
+	}
+	nextPlayer.Send(fmt.Sprintf("%s Drew Drew %d cards  ", nextPlayer.Name, card_count))
+
+}
+func (g *Game) ShuffleDiscardPileToDeck() {
+	if len(g.DisposedGameDeck.Deck.Cards) > 0 {
+		// Shuffle the discard pile
+		rand.Seed(time.Now().UnixNano())
+		rand.Shuffle(len(g.DisposedGameDeck.Deck.Cards), func(i, j int) {
+			g.DisposedGameDeck.Deck.Cards[i], g.DisposedGameDeck.Deck.Cards[j] = g.DisposedGameDeck.Deck.Cards[j], g.DisposedGameDeck.Deck.Cards[i]
+		})
+
+		// Create a new deck from the shuffled discard pile
+		g.GameDeck.Deck.Cards = g.DisposedGameDeck.Deck.Cards
+		g.GameDeck.Deck.Counter = g.DisposedGameDeck.Deck.Counter
+
+		// Clear the discard pile
+		g.DisposedGameDeck.Deck.Cards = make([]models.Card, 0)
+	}
+}
+
+// reverseGameDirection reverses the game direction
+func (g *Game) reverseGameDirection() {
+	g.GameDirection = !g.GameDirection
+}
+
+// skipNextTurn skips the next player's turn
+func (g *Game) skipNextTurn() {
+	nextPlayer := g.getNextPlayer()
+	nextPlayer.Send("Your turn is SKIPPED.......... ")
+
+	g.swtichtoNextPlayer()
+}
+
+// declareWinner declares the winner of the game
+func (g *Game) declareWinner(winner *models.Player) {
+	for _, p := range g.Players {
+		p.Send(fmt.Sprintf("%s HAS WON THE GAME!!!!", winner.Name))
+	}
+	for _, p := range g.Players {
+		p.Send(fmt.Sprintf("GAME OVER  %s ,CLOSING CONNECTION ", winner.Name))
+		p.CloseConnection()
+	}
+	// Perform any necessary  end-game animation with bubbleTea
+}
+func (g *Game) checkforUNO(player *models.Player) {
+	for _, p := range g.Players {
+		p.Send(fmt.Sprintf("UNO !!!! by %s ", player.Name))
+	}
+	// Perform any necessary  end-game animation with bubbleTea
+}
+
+// getNextPlayer returns the next player based on the game direction
+func (g *Game) getNextPlayer() *models.Player {
+	integerDirection := convertDirectionToInteger(g.GameDirection)
+
+	nextTurn := (g.CurrentTurn + integerDirection) % len(g.Players)
+	if nextTurn < 0 {
+		nextTurn += len(g.Players)
+
+	}
+	return g.Players[nextTurn]
+}
+func (g *Game) dealwithActionCards(card models.Card) {
+	cardType := card.Rank
+	switch cardType {
+	case "skip":
+		g.skipNextTurn()
+		break
+	case "draw_2":
+		g.PerformDrawAction(2)
+		break
+	case "reverse":
+		g.reverseGameDirection()
+		break
+	default:
+		// Handle unexpected card types here, e.g., log an error
+		fmt.Println("Unexpected card type:", cardType)
+	}
+}
+
+func (g *Game) swtichtoNextPlayer() {
+	integerDirection := convertDirectionToInteger(g.GameDirection)
+	g.CurrentTurn = (g.CurrentTurn + integerDirection) % len(g.Players)
+	if g.CurrentTurn < 0 {
+		g.CurrentTurn += len(g.Players)
+
+	}
+}
+
 func (g *Game) HandleMessage(msg string, conn *websocket.Conn, clientName string) {
 	parts := strings.Split(msg, " ")
 	command := parts[0]
@@ -234,6 +331,8 @@ func (g *Game) HandleMessage(msg string, conn *websocket.Conn, clientName string
 			g.PlayCard(playerPtr, cardidx)
 			return
 		}
+	} else if command == "draw" {
+
 	} else {
 		conn.WriteMessage(websocket.TextMessage, []byte("Invalid command format"))
 	}
