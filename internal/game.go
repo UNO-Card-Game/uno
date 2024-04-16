@@ -2,9 +2,11 @@ package internal
 
 import (
 	"fmt"
+	"math/rand"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 	"uno/models"
 	"uno/models/constants/color"
 	"uno/models/constants/rank"
@@ -80,7 +82,7 @@ func (g *Game) NextTurn() {
 			// If the game deck is empty, reshuffle the disposed deck
 			g.ShuffleDiscardPileToDeck()
 		}
-		g.PerformDrawAction(1) //Draw 1 card
+		g.PerformDrawAction(g.getNextPlayer(), 1) //Draw 1 card
 		playableCard = nextPlayer.HasPlayableCard(topCard)
 
 		// If the player still doesn't have a playable card after drawing, skip their turn
@@ -146,7 +148,7 @@ func (g *Game) PlayCard(player *models.Player, cardIdx int, newColorStr ...strin
 			}
 			// Perform additional game logic for  DRAW4 card
 			if card.Rank == rank.DRAW_4 {
-				g.PerformDrawAction(4)
+				g.PerformDrawAction(g.getNextPlayer(), 4)
 				g.skipNextTurn()
 
 			}
@@ -203,15 +205,13 @@ func (g *Game) IsValidMove(playedCard models.Card, player *models.Player) bool {
 	return playedCard.IsSameColor(*g.GameTopCard) || playedCard.IsSameRank(*g.GameTopCard)
 }
 
-func (g *Game) PerformDrawAction(card_count int) {
-
-	nextPlayer := g.getNextPlayer()
+func (g *Game) PerformDrawAction(player *models.Player, card_count int) {
 	cardsDrawn := g.GameDeck.Cut(card_count)
-	nextPlayer.AddCards(cardsDrawn)
+	player.AddCards(cardsDrawn)
 	for _, card := range cardsDrawn {
-		nextPlayer.Send(fmt.Sprintf("%s Drew %s", nextPlayer.Name, card.LogCard()))
+		player.Send(fmt.Sprintf("%s Drew %s", player.Name, card.LogCard()))
 	}
-	nextPlayer.Send(fmt.Sprintf("%s Drew Drew %d cards  ", nextPlayer.Name, card_count))
+	player.Send(fmt.Sprintf("%s Drew Drew %d cards  ", player.Name, card_count))
 
 }
 func (g *Game) ShuffleDiscardPileToDeck() {
@@ -280,7 +280,7 @@ func (g *Game) dealwithActionCards(card models.Card) {
 		g.skipNextTurn()
 		break
 	case "draw_2":
-		g.PerformDrawAction(2)
+		g.PerformDrawAction(g.getNextPlayer(), 2)
 		break
 	case "reverse":
 		g.reverseGameDirection()
@@ -332,6 +332,10 @@ func (g *Game) HandleMessage(msg string, conn *websocket.Conn, clientName string
 			return
 		}
 	} else if command == "draw" {
+		if g.ActivePlayer == playerPtr {
+			g.PerformDrawAction(playerPtr, 1)
+			g.NextTurn()
+		}
 
 	} else {
 		conn.WriteMessage(websocket.TextMessage, []byte("Invalid command format"))
