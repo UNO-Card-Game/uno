@@ -2,9 +2,11 @@ package internal
 
 import (
 	"fmt"
+	"math/rand"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 	"uno/models"
 	"uno/models/constants/color"
 	"uno/models/constants/rank"
@@ -20,7 +22,7 @@ type Game struct {
 	GameDirection    bool
 	ActivePlayer     *models.Player //pointer to active player
 	mu               sync.Mutex
-	GameTopCard      *models.Card //TopCard of Playing Game
+	GameTopCard      *models.Card // Top card of the game
 	GameFirstMove    bool
 }
 
@@ -39,11 +41,14 @@ func NewGame(playerNames []string) *Game {
 			Cards: make([]models.Card, 0), // Initialize the Cards slice
 		},
 	}
+	topcard := &gameDeck.Cut(1)[0]
 
 	game := &Game{
 		Players:          players,
 		GameDeck:         gameDeck,
 		DisposedGameDeck: disposedGameDeck,
+		GameDirection:    false,
+		GameTopCard:      topcard,
 	}
 	return game
 }
@@ -77,7 +82,7 @@ func (g *Game) NextTurn() {
 			// If the game deck is empty, reshuffle the disposed deck
 			g.ShuffleDiscardPileToDeck()
 		}
-		g.PerformDrawAction(1) //Draw 1 card
+		g.PerformDrawAction(g.getNextPlayer(), 1) //Draw 1 card
 		playableCard = nextPlayer.HasPlayableCard(topCard)
 
 		// If the player still doesn't have a playable card after drawing, skip their turn
@@ -143,7 +148,7 @@ func (g *Game) PlayCard(player *models.Player, cardIdx int, newColorStr ...strin
 			}
 			// Perform additional game logic for  DRAW4 card
 			if card.Rank == rank.DRAW_4 {
-				g.PerformDrawAction(4)
+				g.PerformDrawAction(g.getNextPlayer(), 4)
 				g.skipNextTurn()
 
 			}
@@ -200,6 +205,101 @@ func (g *Game) IsValidMove(playedCard models.Card, player *models.Player) bool {
 	return playedCard.IsSameColor(*g.GameTopCard) || playedCard.IsSameRank(*g.GameTopCard)
 }
 
+func (g *Game) PerformDrawAction(player *models.Player, card_count int) {
+	cardsDrawn := g.GameDeck.Cut(card_count)
+	player.AddCards(cardsDrawn)
+	for _, card := range cardsDrawn {
+		player.Send(fmt.Sprintf("%s Drew %s", player.Name, card.LogCard()))
+	}
+	player.Send(fmt.Sprintf("%s Drew Drew %d cards  ", player.Name, card_count))
+
+}
+func (g *Game) ShuffleDiscardPileToDeck() {
+	if len(g.DisposedGameDeck.Deck.Cards) > 0 {
+		// Shuffle the discard pile
+		rand.Seed(time.Now().UnixNano())
+		rand.Shuffle(len(g.DisposedGameDeck.Deck.Cards), func(i, j int) {
+			g.DisposedGameDeck.Deck.Cards[i], g.DisposedGameDeck.Deck.Cards[j] = g.DisposedGameDeck.Deck.Cards[j], g.DisposedGameDeck.Deck.Cards[i]
+		})
+
+		// Create a new deck from the shuffled discard pile
+		g.GameDeck.Deck.Cards = g.DisposedGameDeck.Deck.Cards
+		g.GameDeck.Deck.Counter = g.DisposedGameDeck.Deck.Counter
+
+		// Clear the discard pile
+		g.DisposedGameDeck.Deck.Cards = make([]models.Card, 0)
+	}
+}
+
+// reverseGameDirection reverses the game direction
+func (g *Game) reverseGameDirection() {
+	g.GameDirection = !g.GameDirection
+}
+
+// skipNextTurn skips the next player's turn
+func (g *Game) skipNextTurn() {
+	nextPlayer := g.getNextPlayer()
+	nextPlayer.Send("Your turn is SKIPPED.......... ")
+
+	g.swtichtoNextPlayer()
+}
+
+// declareWinner declares the winner of the game
+func (g *Game) declareWinner(winner *models.Player) {
+	for _, p := range g.Players {
+		p.Send(fmt.Sprintf("%s HAS WON THE GAME!!!!", winner.Name))
+	}
+	for _, p := range g.Players {
+		p.Send(fmt.Sprintf("GAME OVER  %s ,CLOSING CONNECTION ", winner.Name))
+		p.CloseConnection()
+	}
+	// Perform any necessary  end-game animation with bubbleTea
+}
+func (g *Game) checkforUNO(player *models.Player) {
+	for _, p := range g.Players {
+		p.Send(fmt.Sprintf("UNO !!!! by %s ", player.Name))
+	}
+	// Perform any necessary  end-game animation with bubbleTea
+}
+
+// getNextPlayer returns the next player based on the game direction
+func (g *Game) getNextPlayer() *models.Player {
+	integerDirection := convertDirectionToInteger(g.GameDirection)
+
+	nextTurn := (g.CurrentTurn + integerDirection) % len(g.Players)
+	if nextTurn < 0 {
+		nextTurn += len(g.Players)
+
+	}
+	return g.Players[nextTurn]
+}
+func (g *Game) dealwithActionCards(card models.Card) {
+	cardType := card.Rank
+	switch cardType {
+	case "skip":
+		g.skipNextTurn()
+		break
+	case "draw_2":
+		g.PerformDrawAction(g.getNextPlayer(), 2)
+		break
+	case "reverse":
+		g.reverseGameDirection()
+		break
+	default:
+		// Handle unexpected card types here, e.g., log an error
+		fmt.Println("Unexpected card type:", cardType)
+	}
+}
+
+func (g *Game) swtichtoNextPlayer() {
+	integerDirection := convertDirectionToInteger(g.GameDirection)
+	g.CurrentTurn = (g.CurrentTurn + integerDirection) % len(g.Players)
+	if g.CurrentTurn < 0 {
+		g.CurrentTurn += len(g.Players)
+
+	}
+}
+
 func (g *Game) HandleMessage(msg string, conn *websocket.Conn, clientName string) {
 	parts := strings.Split(msg, " ")
 	command := parts[0]
@@ -211,35 +311,33 @@ func (g *Game) HandleMessage(msg string, conn *websocket.Conn, clientName string
 		conn.WriteMessage(websocket.TextMessage, []byte("Player not found."))
 		return
 	}
-
-	switch command {
-	case "playcard":
-
+	if command == "sync" {
+		var state = models.SerializeSyncDTO(models.SyncDTO{
+			Player: *playerPtr,
+			Game: models.GameState{
+				Topcard: *g.GameTopCard,
+				Turn:    g.ActivePlayer.Name,
+				Reverse: g.GameDirection,
+			},
+		})
+		conn.WriteMessage(websocket.TextMessage, state)
+	} else if command == "playcard" {
 		if len(parts) < 2 {
 			// Handle invalid command format
-
 			conn.WriteMessage(websocket.TextMessage, []byte("Invalid command format.\n Usage: playcard <cardIndex> and Usage: playcard <cardIndex> <color> for DRAW 4 and WILD"))
 
 		} else if len(parts) == 2 {
 			cardidx, _ := strconv.Atoi(parts[1])
 			g.PlayCard(playerPtr, cardidx)
 			return
-		} else if len(parts) == 3 {
-			cardidx, _ := strconv.Atoi(parts[1])
-			newColor := parts[2]
-
-			g.PlayCard(playerPtr, cardidx, newColor)
-			return
 		}
-		// Call the PlayCard function for the player
+	} else if command == "draw" {
+		if g.ActivePlayer == playerPtr {
+			g.PerformDrawAction(playerPtr, 1)
+			g.NextTurn()
+		}
 
-	case "showcards":
-		// Call the ShowCards function for the player
-		your_cards := playerPtr.CardInHand()
-		conn.WriteMessage(websocket.TextMessage, []byte(your_cards))
-	case "topcard":
-		conn.WriteMessage(websocket.TextMessage, []byte(g.GameTopCard.LogCard()))
-	default:
-		conn.WriteMessage(websocket.TextMessage, []byte("Chat msg"))
+	} else {
+		conn.WriteMessage(websocket.TextMessage, []byte("Invalid command format"))
 	}
 }

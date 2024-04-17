@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/gorilla/websocket"
 	"net/http"
-	"strings"
 	"sync"
 	"uno/internal"
 )
@@ -102,27 +101,18 @@ func HandleConnections(w http.ResponseWriter, r *http.Request, game *internal.Ga
 	// Wait for all players to join before starting the game
 	if len(clients) == len(game.Players) && !gameStarted {
 		start_msg := []byte("All players have joined. Send 'start' to begin the game.")
-
+		game.Start()
+		broadcast <- fmt.Sprintf("%s started the game", clientName)
 		if err := conn.WriteMessage(websocket.TextMessage, start_msg); err != nil {
 			fmt.Println(err)
 			return
 		}
 	}
-	//go broadcastMessages()
 
 	for {
-		// Read message from browser/terminal
 		_, msg, err := conn.ReadMessage()
 		if err != nil {
 			return
-		}
-
-		// Start the game if the first player sends the "start" message
-		if strings.ToLower(string(msg)) == "start" && len(clients) == len(game.Players) && !gameStarted {
-			gameStarted = true
-
-			game.Start()
-			broadcast <- fmt.Sprintf("%s started the game", clientName)
 		}
 
 		// Add your own logic here to filter out certain messages
