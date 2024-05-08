@@ -27,16 +27,13 @@ type Game struct {
 	Network          Network
 }
 
-func NewGame(playerNames []string) *Game {
-	players := make([]*models.Player, len(playerNames)) //Clients
-	for i, name := range playerNames {
-		players[i] = models.NewPlayer(name)
-	}
-
+func NewGame() *Game {
+	//players := make([]*models.Player, len(playerNames)) //Clients
+	//for i, name := range playerNames {
+	//	players[i] = models.NewPlayer(name)
+	//}
+	//
 	gameDeck := models.NewGameDeck() //Initialised Game Deck
-	for _, p := range players {
-		p.AddCards(gameDeck.Cut(7)) //Players get the cards
-	}
 	disposedGameDeck := &models.GameDeck{
 		Deck: &models.Deck{
 			Cards: make([]models.Card, 0), // Initialize the Cards slice
@@ -45,7 +42,7 @@ func NewGame(playerNames []string) *Game {
 	topcard := &gameDeck.Cut(1)[0]
 	var (
 		game = &Game{
-			Players:          players,
+			Players:          make([]*models.Player, 0),
 			GameDeck:         gameDeck,
 			DisposedGameDeck: disposedGameDeck,
 			GameDirection:    false,
@@ -54,6 +51,13 @@ func NewGame(playerNames []string) *Game {
 		}
 	)
 	return game
+}
+
+func (g *Game) AddPlayer(player *models.Player) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	player.AddCards(g.GameDeck.Cut(7))
+	g.Players = append(g.Players, player)
 }
 
 func (g *Game) NextTurn() {
