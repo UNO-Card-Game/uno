@@ -122,6 +122,7 @@ func (g *Game) Start() {
 		}
 	}
 
+	g.SyncAllPlayers()
 }
 func (g *Game) PlayCard(player *models.Player, cardIdx int, newColorStr ...string) {
 	g.mu.Lock()
@@ -304,6 +305,7 @@ func (g *Game) swtichtoNextPlayer() {
 }
 
 func (g *Game) HandleMessage(msg string, player *models.Player) {
+	g.SyncAllPlayers()
 	parts := strings.Split(msg, " ")
 	command := parts[0]
 
@@ -341,6 +343,17 @@ func (g *Game) HandleMessage(msg string, player *models.Player) {
 	}
 }
 
-//func (g *Game) SyncAllPlayers() {
-//	for _, client := range clients
-//}
+func (g *Game) SyncAllPlayers() {
+	for _, player := range g.Players {
+		state := models.SerializeSyncDTO(models.SyncDTO{
+			Player: *player,
+			Game: models.GameState{
+				Topcard: *g.GameTopCard,
+				Turn:    g.ActivePlayer.Name,
+				Reverse: g.GameDirection,
+			},
+		})
+		conn := g.Network.clients[*player]
+		conn.WriteMessage(websocket.TextMessage, state)
+	}
+}
