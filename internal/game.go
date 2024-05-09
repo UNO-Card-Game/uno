@@ -18,6 +18,7 @@ type Game struct {
 	Players          []*models.Player
 	GameDeck         *models.GameDeck
 	DisposedGameDeck *models.GameDeck
+	GameStarted      bool
 	CurrentTurn      int
 	GameDirection    bool
 	ActivePlayer     *models.Player //pointer to active player
@@ -27,16 +28,8 @@ type Game struct {
 	Network          Network
 }
 
-func NewGame(playerNames []string) *Game {
-	players := make([]*models.Player, len(playerNames)) //Clients
-	for i, name := range playerNames {
-		players[i] = models.NewPlayer(name)
-	}
-
+func NewGame() *Game {
 	gameDeck := models.NewGameDeck() //Initialised Game Deck
-	for _, p := range players {
-		p.AddCards(gameDeck.Cut(7)) //Players get the cards
-	}
 	disposedGameDeck := &models.GameDeck{
 		Deck: &models.Deck{
 			Cards: make([]models.Card, 0), // Initialize the Cards slice
@@ -45,15 +38,23 @@ func NewGame(playerNames []string) *Game {
 	topcard := &gameDeck.Cut(1)[0]
 	var (
 		game = &Game{
-			Players:          players,
+			Players:          make([]*models.Player, 0),
 			GameDeck:         gameDeck,
 			DisposedGameDeck: disposedGameDeck,
+			GameStarted:      false,
 			GameDirection:    false,
 			GameTopCard:      topcard,
 			Network:          *NewNetwork(),
 		}
 	)
 	return game
+}
+
+func (g *Game) AddPlayer(player *models.Player) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	player.AddCards(g.GameDeck.Cut(7))
+	g.Players = append(g.Players, player)
 }
 
 func (g *Game) NextTurn() {
@@ -110,9 +111,10 @@ func (g *Game) Start() {
 
 	// Start the first player's turn
 	g.CurrentTurn = 0
-	g.GameDirection = true
 	g.GameFirstMove = true
 	g.ActivePlayer = g.Players[g.CurrentTurn] //g.Players is already a pointer
+	g.GameStarted = true
+	go g.Network.BroadcastMessages()
 	for _, p := range g.Players {
 
 		err := g.Network.SendMessage(p, fmt.Sprintf("It's %s's turn.Please play your turn.\n", g.ActivePlayer.Name))

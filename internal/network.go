@@ -59,64 +59,9 @@ func (n *Network) BroadcastMessages() {
 
 }
 
-func (n Network) EstablishConnections(w http.ResponseWriter, r *http.Request, game *Game) {
-	conn, err := n.upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	//defer func() {
-	//	p := n.clients[conn]
-	//	delete(n.clients, conn)
-	//	conn.Close()
-	//}()
+func (n Network) ListenToClient(player *models.Player, game *Game) {
 
-	// Ask the user to enter their name
-	var player *models.Player
-	player = nil
-	for {
-		if err := conn.WriteMessage(websocket.TextMessage, []byte("Please enter your name: ")); err != nil {
-			fmt.Println(err)
-			return
-		}
-		_, name, err := conn.ReadMessage()
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		// Check if the name exists in the players slice
-		for _, p := range game.Players {
-			if p.Name == string(name) {
-				player = p
-				break
-			}
-		}
-
-		if player != nil {
-			// Name found, assign with ClientName Map
-			n.clients[*player] = conn
-			fmt.Printf("New client '%s' joined\n", player.Name)
-			break
-		} else {
-			// Name not found, ask the user to input again
-			if err := conn.WriteMessage(websocket.TextMessage, []byte("Name not found. Please try again. Use names from players slice")); err != nil {
-				fmt.Println(err)
-				return
-			}
-		}
-	}
-
-	// Wait for all players to join before starting the game
-	if len(n.clients) == len(game.Players) && !n.gameStarted {
-		start_msg := []byte("All players have joined. Send 'start' to begin the game.")
-		game.Start()
-		n.broadcast <- fmt.Sprintf("%s started the game", player.Name)
-		if err := conn.WriteMessage(websocket.TextMessage, start_msg); err != nil {
-			fmt.Println(err)
-			return
-		}
-	}
-
+	conn := n.clients[*player]
 	for {
 		_, msg, err := conn.ReadMessage()
 		if err != nil {
@@ -135,13 +80,12 @@ func (n Network) EstablishConnections(w http.ResponseWriter, r *http.Request, ga
 	}
 }
 
-func (n Network) ListenToClients() {
-
+func (n Network) BroadcastMessage(message string) {
+	n.broadcast <- fmt.Sprintf(string(message))
 }
 
 func (n Network) SendMessage(p *models.Player, message string) error {
 	conn := n.clients[*p]
-	fmt.Printf("conn:", conn)
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
 	err := conn.WriteMessage(websocket.TextMessage, []byte(message))
