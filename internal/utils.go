@@ -2,8 +2,6 @@ package internal
 
 import (
 	"uno/models"
-
-	"golang.org/x/exp/slices"
 )
 
 func ShouldBroadcast(msg string) bool {
@@ -17,15 +15,7 @@ func ShouldBroadcast(msg string) bool {
 
 	return true
 }
-func findPlayer(players []*models.Player, name string) *models.Player {
-	idx := slices.IndexFunc(players, func(p *models.Player) bool {
-		return p.Name == name
-	})
-	if idx == -1 {
-		return nil
-	}
-	return players[idx]
-}
+
 func convertDirectionToInteger(direction bool) int {
 	if direction {
 		return 1

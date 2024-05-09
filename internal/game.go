@@ -29,11 +29,6 @@ type Game struct {
 }
 
 func NewGame() *Game {
-	//players := make([]*models.Player, len(playerNames)) //Clients
-	//for i, name := range playerNames {
-	//	players[i] = models.NewPlayer(name)
-	//}
-	//
 	gameDeck := models.NewGameDeck() //Initialised Game Deck
 	disposedGameDeck := &models.GameDeck{
 		Deck: &models.Deck{
@@ -119,6 +114,7 @@ func (g *Game) Start() {
 	g.GameFirstMove = true
 	g.ActivePlayer = g.Players[g.CurrentTurn] //g.Players is already a pointer
 	g.GameStarted = true
+	go g.Network.BroadcastMessages()
 	for _, p := range g.Players {
 
 		err := g.Network.SendMessage(p, fmt.Sprintf("It's %s's turn.Please play your turn.\n", g.ActivePlayer.Name))
