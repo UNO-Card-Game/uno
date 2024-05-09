@@ -18,6 +18,7 @@ type Game struct {
 	Players          []*models.Player
 	GameDeck         *models.GameDeck
 	DisposedGameDeck *models.GameDeck
+	GameStarted      bool
 	CurrentTurn      int
 	GameDirection    bool
 	ActivePlayer     *models.Player //pointer to active player
@@ -45,6 +46,7 @@ func NewGame() *Game {
 			Players:          make([]*models.Player, 0),
 			GameDeck:         gameDeck,
 			DisposedGameDeck: disposedGameDeck,
+			GameStarted:      false,
 			GameDirection:    false,
 			GameTopCard:      topcard,
 			Network:          *NewNetwork(),
@@ -114,9 +116,9 @@ func (g *Game) Start() {
 
 	// Start the first player's turn
 	g.CurrentTurn = 0
-	g.GameDirection = true
 	g.GameFirstMove = true
 	g.ActivePlayer = g.Players[g.CurrentTurn] //g.Players is already a pointer
+	g.GameStarted = true
 	for _, p := range g.Players {
 
 		err := g.Network.SendMessage(p, fmt.Sprintf("It's %s's turn.Please play your turn.\n", g.ActivePlayer.Name))
