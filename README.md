@@ -45,6 +45,16 @@ To connect to the server port, use `wscat` with the following command:
 ```bash
 wscat -c ws://localhost:8080/ws
 ```
+To create Game Room lobby , use the following command:
+```bash
+wscat -c "ws://localhost:8080/create?player_name=[NAME]&max_players=[MAX_PLAYER_COUNT]"
+wscat -c "ws://localhost:8080/create?player_name=Alice&max_players=2"
+```
+To JOIN Game Room lobby , use the following command:
+```bash
+wscat -c "ws://localhost:8080/create?player_name=[NAME]&mroom_id=[ROOM_ID_NUMBER]"
+wscat -c "ws://localhost:8080/join?player_name=Bob&room_id=33"
+```
 
 - Replace `8080` with your specific port number if needed.
 - Enter the player name correctly when prompted.
