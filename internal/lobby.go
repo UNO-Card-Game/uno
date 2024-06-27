@@ -1,14 +1,14 @@
 package internal
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"math/rand"
 	"net/http"
 	"strconv"
 	"time"
-	"uno/models"
+	"uno/models/dtos"
+	"uno/models/game"
 )
 
 // Room represents a game room
@@ -64,12 +64,15 @@ func CreateRoomHandler(w http.ResponseWriter, r *http.Request) {
 	rooms[roomId] = room
 
 	// Respond with the room id
-	response := map[string]int{"room_id": roomId}
-	res, err := json.Marshal(response)
-	if err != nil {
-		http.Error(w, "Failed to create room", http.StatusInternalServerError)
-		return
+
+	dto := dtos.ConnectionDTO{
+		playerName,
+		room.id,
+		maxPlayers,
+		room.game.Players,
 	}
+	res := dto.Serialize()
+
 	game := &room.game
 	player := AddPlayerToRoom(&w, roomId, playerName)
 
@@ -102,6 +105,14 @@ func JoinRoomHandler(w http.ResponseWriter, r *http.Request) {
 	conn := UpgradeWebsocket(w, r, *room)
 	game.Network.clients[*player] = conn
 
+	dto := dtos.ConnectionDTO{
+		playerName,
+		room.id,
+		room.maxPlayers,
+		room.game.Players,
+	}
+	conn.WriteMessage(websocket.TextMessage, dto.Serialize())
+
 	if len(game.Network.clients) == room.maxPlayers && game.GameStarted == false {
 		game.Start()
 		game.Network.BroadcastMessage("All players have joined. Game has started.")
@@ -111,20 +122,20 @@ func JoinRoomHandler(w http.ResponseWriter, r *http.Request) {
 	game.Network.ListenToClient(player, game)
 }
 
-func AddPlayerToRoom(w *http.ResponseWriter, roomId int, playerName string) *models.Player {
-	room, ok := rooms[roomId]
+func AddPlayerToRoom(w *http.ResponseWriter, roomId int, playerName string) *game.Player {
+	r, ok := rooms[roomId]
 	if !ok {
 		http.Error(*w, "Room not found", http.StatusNotFound)
 		return nil
 	}
-	game := &room.game
-	if len(game.Players) >= room.maxPlayers {
+	g := &r.game
+	if len(g.Players) >= r.maxPlayers {
 		http.Error(*w, "Room is full", http.StatusForbidden)
 		return nil
 	}
 
-	player := models.NewPlayer(playerName)
-	game.AddPlayer(player)
+	player := game.NewPlayer(playerName)
+	g.AddPlayer(player)
 	return player
 }
 

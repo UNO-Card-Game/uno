@@ -5,12 +5,12 @@ import (
 	"github.com/gorilla/websocket"
 	"net/http"
 	"sync"
-	"uno/models"
+	"uno/models/game"
 )
 
 type Network struct {
 	//clients map[*websocket.Conn]*models.Player
-	clients     map[models.Player]*websocket.Conn
+	clients     map[game.Player]*websocket.Conn
 	upgrader    websocket.Upgrader
 	broadcast   chan string
 	gameStarted bool
@@ -19,7 +19,7 @@ type Network struct {
 
 func NewNetwork() *Network {
 	return &Network{
-		clients: make(map[models.Player]*websocket.Conn),
+		clients: make(map[game.Player]*websocket.Conn),
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
 				return true // Accepts requests from every source
@@ -59,7 +59,7 @@ func (n *Network) BroadcastMessages() {
 
 }
 
-func (n Network) ListenToClient(player *models.Player, game *Game) {
+func (n Network) ListenToClient(player *game.Player, game *Game) {
 
 	conn := n.clients[*player]
 	for {
@@ -84,7 +84,7 @@ func (n Network) BroadcastMessage(message string) {
 	n.broadcast <- fmt.Sprintf(string(message))
 }
 
-func (n Network) SendMessage(p *models.Player, message string) error {
+func (n Network) SendMessage(p *game.Player, message string) error {
 	conn := n.clients[*p]
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
@@ -95,7 +95,7 @@ func (n Network) SendMessage(p *models.Player, message string) error {
 	return nil
 }
 
-func (n Network) CloseConnection(p *models.Player) {
+func (n Network) CloseConnection(p *game.Player) {
 	conn := n.clients[*p]
 	conn.Close()
 }
