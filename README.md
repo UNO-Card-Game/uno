@@ -52,7 +52,7 @@ wscat -c "ws://localhost:8080/create?player_name=Alice&max_players=2"
 ```
 To JOIN Game Room lobby , use the following command:
 ```bash
-wscat -c "ws://localhost:8080/create?player_name=[NAME]&mroom_id=[ROOM_ID_NUMBER]"
+wscat -c "ws://localhost:8080/join?player_name=[NAME]&mroom_id=[ROOM_ID_NUMBER]"
 wscat -c "ws://localhost:8080/join?player_name=Bob&room_id=33"
 ```
 
