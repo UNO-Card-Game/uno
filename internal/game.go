@@ -86,7 +86,7 @@ func (g *Game) NextTurn() {
 			// If the game deck is empty, reshuffle the disposed deck
 			g.ShuffleDiscardPileToDeck()
 		}
-		g.PerformDrawAction(g.getNextPlayer(), 1) //Draw 1 card
+		g.PerformDrawAction(g.getNextPlayer(), 1) 
 		playableCard = nextPlayer.HasPlayableCard(topCard)
 
 		// If the player still doesn't have a playable card after drawing, skip their turn
@@ -247,7 +247,7 @@ func (g *Game) skipNextTurn() {
 	nextPlayer := g.getNextPlayer()
 	g.Network.SendMessage(nextPlayer, "Your turn is SKIPPED.......... ")
 
-	g.swtichtoNextPlayer()
+	g.switchtoNextPlayer()
 }
 
 // declareWinner declares the winner of the game
@@ -297,13 +297,14 @@ func (g *Game) dealwithActionCards(card models.Card) {
 	}
 }
 
-func (g *Game) swtichtoNextPlayer() {
+func (g *Game) switchtoNextPlayer() {
 	integerDirection := convertDirectionToInteger(g.GameDirection)
 	g.CurrentTurn = (g.CurrentTurn + integerDirection) % len(g.Players)
 	if g.CurrentTurn < 0 {
 		g.CurrentTurn += len(g.Players)
 
 	}
+	g.ActivePlayer = g.Players[g.CurrentTurn] // Set Active player
 }
 
 func (g *Game) HandleMessage(msg string, player *models.Player) {
@@ -333,8 +334,14 @@ func (g *Game) HandleMessage(msg string, player *models.Player) {
 			cardidx, _ := strconv.Atoi(parts[1])
 			g.PlayCard(player, cardidx)
 			return
-		}
-	} else if command == "draw" {
+		} else if len(parts) == 3 {
+			cardidx, _ := strconv.Atoi(parts[1])
+			newColor := parts[2]
+
+			g.PlayCard(playerPtr, cardidx, newColor)
+			return
+
+	   } else if command == "draw" {
 		if g.ActivePlayer == player {
 			g.PerformDrawAction(player, 1)
 			g.NextTurn()
