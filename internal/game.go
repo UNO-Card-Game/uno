@@ -86,7 +86,7 @@ func (g *Game) NextTurn() {
 			// If the game deck is empty, reshuffle the disposed deck
 			g.ShuffleDiscardPileToDeck()
 		}
-		g.PerformDrawAction(g.getNextPlayer(), 1) 
+		g.PerformDrawAction(g.getNextPlayer(), 1) //Draw 1 card
 		playableCard = nextPlayer.HasPlayableCard(topCard)
 
 		// If the player still doesn't have a playable card after drawing, skip their turn
