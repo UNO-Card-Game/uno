@@ -340,7 +340,6 @@ func (g *Game) HandleMessage(msg string, player *models.Player) {
 
 			g.PlayCard(playerPtr, cardidx, newColor)
 			return
-
 	   } else if command == "draw" {
 		if g.ActivePlayer == player {
 			g.PerformDrawAction(player, 1)
