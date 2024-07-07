@@ -304,7 +304,7 @@ func (g *Game) switchtoNextPlayer() {
 		g.CurrentTurn += len(g.Players)
 
 	}
-	g.ActivePlayer = g.Players[g.CurrentTurn] // Set Active player
+	
 }
 
 func (g *Game) HandleMessage(msg string, player *models.Player) {
