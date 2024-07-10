@@ -5,6 +5,7 @@ import (
 	"github.com/gorilla/websocket"
 	"net/http"
 	"sync"
+	"uno/models/dtos"
 	"uno/models/game"
 )
 
@@ -39,7 +40,8 @@ func (n *Network) BroadcastMessages() {
 			for _, conn := range n.clients {
 				// Use a mutex to synchronize writes to the websocket connection
 				n.mutex.Lock()
-				err := conn.WriteMessage(websocket.TextMessage, []byte(": "+message))
+				defer n.mutex.Unlock()
+				err := conn.WriteMessage(websocket.TextMessage, []byte(message))
 				if err != nil {
 					if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 						fmt.Printf("Error writing message to client : %v\n", err)
@@ -59,8 +61,16 @@ func (n *Network) BroadcastMessages() {
 
 }
 
-func (n Network) ListenToClient(player *game.Player, game *Game) {
-
+func (n Network) ListenToClient(player *game.Player, r *Room) {
+	game := r.game
+	if len(game.Network.clients) == r.maxPlayers && game.GameStarted == false {
+		game.Start()
+		dto := dtos.InfoDTO{Message: "All players have joined. Game has started."}
+		game.Network.BroadcastMessage(dto.Serialize())
+	} else {
+		dto := dtos.InfoDTO{Message: "Waiting for players to join the game."}
+		game.Network.BroadcastMessage(dto.Serialize())
+	}
 	conn := n.clients[*player]
 	for {
 		_, msg, err := conn.ReadMessage()
@@ -80,8 +90,8 @@ func (n Network) ListenToClient(player *game.Player, game *Game) {
 	}
 }
 
-func (n Network) BroadcastMessage(message string) {
-	n.broadcast <- fmt.Sprintf(string(message))
+func (n Network) BroadcastMessage(message []byte) {
+	n.broadcast <- string(message)
 }
 
 func (n Network) SendMessage(p *game.Player, message string) error {

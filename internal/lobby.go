@@ -62,24 +62,21 @@ func CreateRoomHandler(w http.ResponseWriter, r *http.Request) {
 		maxPlayers: maxPlayers,
 	}
 	rooms[roomId] = room
+	game := &room.game
+	player := AddPlayerToRoom(&w, roomId, playerName)
 
 	// Respond with the room id
-
 	dto := dtos.ConnectionDTO{
 		playerName,
 		room.id,
 		maxPlayers,
-		room.game.Players,
+		room.game.getAllPlayers(),
 	}
 	res := dto.Serialize()
-
-	game := &room.game
-	player := AddPlayerToRoom(&w, roomId, playerName)
-
 	conn := UpgradeWebsocket(w, r, *room)
 	game.Network.clients[*player] = conn
 	conn.WriteMessage(websocket.TextMessage, res)
-	game.Network.ListenToClient(player, game)
+	game.Network.ListenToClient(player, room)
 
 }
 
@@ -109,17 +106,11 @@ func JoinRoomHandler(w http.ResponseWriter, r *http.Request) {
 		playerName,
 		room.id,
 		room.maxPlayers,
-		room.game.Players,
+		room.game.getAllPlayers(),
 	}
 	conn.WriteMessage(websocket.TextMessage, dto.Serialize())
 
-	if len(game.Network.clients) == room.maxPlayers && game.GameStarted == false {
-		game.Start()
-		game.Network.BroadcastMessage("All players have joined. Game has started.")
-	} else {
-		game.Network.SendMessage(player, "Waiting for players to join the game.")
-	}
-	game.Network.ListenToClient(player, game)
+	game.Network.ListenToClient(player, room)
 }
 
 func AddPlayerToRoom(w *http.ResponseWriter, roomId int, playerName string) *game.Player {
