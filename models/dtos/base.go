@@ -3,8 +3,8 @@ package dtos
 import "encoding/json"
 
 type DTO struct {
-	Type string
-	Obj  ObjDTO
+	Type string `json:"type"`
+	Obj  ObjDTO `json:"obj"`
 }
 
 type ObjDTO interface {

@@ -5,14 +5,14 @@ import (
 )
 
 type SyncDTO struct {
-	Player game.Player
-	Game   GameState
+	Player game.Player `json:"player_name"`
+	Game   GameState   `json:"game"`
 }
 
 type GameState struct {
-	Topcard game.Card
-	Turn    string
-	Reverse bool
+	Topcard game.Card `json:"topcard"`
+	Turn    string    `json:"turn"`
+	Reverse bool      `json:"reverse"`
 }
 
 func (dto SyncDTO) Serialize() []byte {
