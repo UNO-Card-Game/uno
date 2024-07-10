@@ -116,16 +116,7 @@ func (g *Game) Start() {
 	g.ActivePlayer = g.Players[g.CurrentTurn] //g.Players is already a pointer
 	g.GameStarted = true
 	go g.Network.BroadcastMessages()
-	for _, p := range g.Players {
-
-		err := g.Network.SendMessage(p, fmt.Sprintf("It's %s's turn.Please play your turn.\n", g.ActivePlayer.Name))
-		if err != nil {
-			// Handle the error
-			fmt.Errorf("Error sending message to player %s: %v\n", p.Name, err)
-		}
-	}
-
-	g.SyncAllPlayers()
+	go g.SyncAllPlayers()
 }
 func (g *Game) PlayCard(player *game.Player, cardIdx int, newColorStr ...string) {
 	g.mu.Lock()
@@ -280,6 +271,15 @@ func (g *Game) getNextPlayer() *game.Player {
 	}
 	return g.Players[nextTurn]
 }
+
+func (g *Game) getAllPlayers() []string {
+	var playerNames []string
+	for _, player := range g.Players {
+		playerNames = append(playerNames, player.Name)
+	}
+	return playerNames
+}
+
 func (g *Game) dealwithActionCards(card game.Card) {
 	cardType := card.Rank
 	switch cardType {
