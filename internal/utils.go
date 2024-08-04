@@ -1,7 +1,7 @@
 package internal
 
 import (
-	"uno/models"
+	"uno/models/game"
 )
 
 func ShouldBroadcast(msg string) bool {
@@ -22,7 +22,7 @@ func convertDirectionToInteger(direction bool) int {
 	}
 	return -1
 }
-func removeCardFromHand(hand []models.Card, card models.Card) []models.Card {
+func removeCardFromHand(hand []game.Card, card game.Card) []game.Card {
 	for i, c := range hand {
 		if c == card {
 			return append(hand[:i], hand[i+1:]...)

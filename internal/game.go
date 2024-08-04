@@ -7,38 +7,39 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"uno/models"
 	"uno/models/constants/color"
 	"uno/models/constants/rank"
+	"uno/models/dtos"
+	"uno/models/game"
 
 	"github.com/gorilla/websocket"
 )
 
 type Game struct {
-	Players          []*models.Player
-	GameDeck         *models.GameDeck
-	DisposedGameDeck *models.GameDeck
+	Players          []*game.Player
+	GameDeck         *game.GameDeck
+	DisposedGameDeck *game.GameDeck
 	GameStarted      bool
 	CurrentTurn      int
 	GameDirection    bool
-	ActivePlayer     *models.Player //pointer to active player
+	ActivePlayer     *game.Player //pointer to active player
 	mu               sync.Mutex
-	GameTopCard      *models.Card // Top card of the game
+	GameTopCard      *game.Card // Top card of the game
 	GameFirstMove    bool
 	Network          Network
 }
 
 func NewGame() *Game {
-	gameDeck := models.NewGameDeck() //Initialised Game Deck
-	disposedGameDeck := &models.GameDeck{
-		Deck: &models.Deck{
-			Cards: make([]models.Card, 0), // Initialize the Cards slice
+	gameDeck := game.NewGameDeck() //Initialised Game Deck
+	disposedGameDeck := &game.GameDeck{
+		Deck: &game.Deck{
+			Cards: make([]game.Card, 0), // Initialize the Cards slice
 		},
 	}
 	topcard := &gameDeck.Cut(1)[0]
 	var (
 		game = &Game{
-			Players:          make([]*models.Player, 0),
+			Players:          make([]*game.Player, 0),
 			GameDeck:         gameDeck,
 			DisposedGameDeck: disposedGameDeck,
 			GameStarted:      false,
@@ -50,7 +51,7 @@ func NewGame() *Game {
 	return game
 }
 
-func (g *Game) AddPlayer(player *models.Player) {
+func (g *Game) AddPlayer(player *game.Player) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	player.AddCards(g.GameDeck.Cut(7))
@@ -115,18 +116,9 @@ func (g *Game) Start() {
 	g.ActivePlayer = g.Players[g.CurrentTurn] //g.Players is already a pointer
 	g.GameStarted = true
 	go g.Network.BroadcastMessages()
-	for _, p := range g.Players {
-
-		err := g.Network.SendMessage(p, fmt.Sprintf("It's %s's turn.Please play your turn.\n", g.ActivePlayer.Name))
-		if err != nil {
-			// Handle the error
-			fmt.Errorf("Error sending message to player %s: %v\n", p.Name, err)
-		}
-	}
-
-	g.SyncAllPlayers()
+	go g.SyncAllPlayers()
 }
-func (g *Game) PlayCard(player *models.Player, cardIdx int, newColorStr ...string) {
+func (g *Game) PlayCard(player *game.Player, cardIdx int, newColorStr ...string) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -190,7 +182,7 @@ func (g *Game) PlayCard(player *models.Player, cardIdx int, newColorStr ...strin
 	}
 }
 
-func (g *Game) IsValidMove(playedCard models.Card, player *models.Player) bool {
+func (g *Game) IsValidMove(playedCard game.Card, player *game.Player) bool {
 	// Check if it's the first move of the game and the player is active
 	if player == g.ActivePlayer {
 		if playedCard.Type() == "action-card-no-color" {
@@ -211,7 +203,7 @@ func (g *Game) IsValidMove(playedCard models.Card, player *models.Player) bool {
 	return playedCard.IsSameColor(*g.GameTopCard) || playedCard.IsSameRank(*g.GameTopCard)
 }
 
-func (g *Game) PerformDrawAction(player *models.Player, card_count int) {
+func (g *Game) PerformDrawAction(player *game.Player, card_count int) {
 	cardsDrawn := g.GameDeck.Cut(card_count)
 	player.AddCards(cardsDrawn)
 	for _, card := range cardsDrawn {
@@ -233,7 +225,7 @@ func (g *Game) ShuffleDiscardPileToDeck() {
 		g.GameDeck.Deck.Counter = g.DisposedGameDeck.Deck.Counter
 
 		// Clear the discard pile
-		g.DisposedGameDeck.Deck.Cards = make([]models.Card, 0)
+		g.DisposedGameDeck.Deck.Cards = make([]game.Card, 0)
 	}
 }
 
@@ -251,7 +243,7 @@ func (g *Game) skipNextTurn() {
 }
 
 // declareWinner declares the winner of the game
-func (g *Game) declareWinner(winner *models.Player) {
+func (g *Game) declareWinner(winner *game.Player) {
 	for _, p := range g.Players {
 		g.Network.SendMessage(p, fmt.Sprintf("%s HAS WON THE GAME!!!!", winner.Name))
 	}
@@ -261,7 +253,7 @@ func (g *Game) declareWinner(winner *models.Player) {
 	}
 	// Perform any necessary  end-game animation with bubbleTea
 }
-func (g *Game) checkforUNO(player *models.Player) {
+func (g *Game) checkforUNO(player *game.Player) {
 	for _, p := range g.Players {
 		g.Network.SendMessage(p, fmt.Sprintf("UNO !!!! by %s ", player.Name))
 	}
@@ -269,7 +261,7 @@ func (g *Game) checkforUNO(player *models.Player) {
 }
 
 // getNextPlayer returns the next player based on the game direction
-func (g *Game) getNextPlayer() *models.Player {
+func (g *Game) getNextPlayer() *game.Player {
 	integerDirection := convertDirectionToInteger(g.GameDirection)
 
 	nextTurn := (g.CurrentTurn + integerDirection) % len(g.Players)
@@ -279,7 +271,16 @@ func (g *Game) getNextPlayer() *models.Player {
 	}
 	return g.Players[nextTurn]
 }
-func (g *Game) dealwithActionCards(card models.Card) {
+
+func (g *Game) getAllPlayers() []string {
+	var playerNames []string
+	for _, player := range g.Players {
+		playerNames = append(playerNames, player.Name)
+	}
+	return playerNames
+}
+
+func (g *Game) dealwithActionCards(card game.Card) {
 	cardType := card.Rank
 	switch cardType {
 	case "skip":
@@ -306,7 +307,7 @@ func (g *Game) swtichtoNextPlayer() {
 	}
 }
 
-func (g *Game) HandleMessage(msg string, player *models.Player) {
+func (g *Game) HandleMessage(msg string, player *game.Player) {
 	g.SyncAllPlayers()
 	parts := strings.Split(msg, " ")
 	command := parts[0]
@@ -315,15 +316,15 @@ func (g *Game) HandleMessage(msg string, player *models.Player) {
 
 	// Find the player index in the Players slice
 	if command == "sync" {
-		var state = models.SerializeSyncDTO(models.SyncDTO{
+		dto := dtos.SyncDTO{
 			Player: *player,
-			Game: models.GameState{
+			Game: dtos.GameState{
 				Topcard: *g.GameTopCard,
 				Turn:    g.ActivePlayer.Name,
 				Reverse: g.GameDirection,
 			},
-		})
-		conn.WriteMessage(websocket.TextMessage, state)
+		}
+		conn.WriteMessage(websocket.TextMessage, dto.Serialize())
 	} else if command == "playcard" {
 		if len(parts) < 2 {
 			// Handle invalid command format
@@ -347,15 +348,15 @@ func (g *Game) HandleMessage(msg string, player *models.Player) {
 
 func (g *Game) SyncAllPlayers() {
 	for _, player := range g.Players {
-		state := models.SerializeSyncDTO(models.SyncDTO{
+		dto := dtos.SyncDTO{
 			Player: *player,
-			Game: models.GameState{
+			Game: dtos.GameState{
 				Topcard: *g.GameTopCard,
 				Turn:    g.ActivePlayer.Name,
 				Reverse: g.GameDirection,
 			},
-		})
+		}
 		conn := g.Network.clients[*player]
-		conn.WriteMessage(websocket.TextMessage, state)
+		conn.WriteMessage(websocket.TextMessage, dto.Serialize())
 	}
 }
