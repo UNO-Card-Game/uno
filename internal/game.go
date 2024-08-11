@@ -239,7 +239,7 @@ func (g *Game) skipNextTurn() {
 	nextPlayer := g.getNextPlayer()
 	g.Network.SendMessage(nextPlayer, "Your turn is SKIPPED.......... ")
 
-	g.swtichtoNextPlayer()
+	g.switchtoNextPlayer()
 }
 
 // declareWinner declares the winner of the game
@@ -298,13 +298,14 @@ func (g *Game) dealwithActionCards(card game.Card) {
 	}
 }
 
-func (g *Game) swtichtoNextPlayer() {
+func (g *Game) switchtoNextPlayer() {
 	integerDirection := convertDirectionToInteger(g.GameDirection)
 	g.CurrentTurn = (g.CurrentTurn + integerDirection) % len(g.Players)
 	if g.CurrentTurn < 0 {
 		g.CurrentTurn += len(g.Players)
 
 	}
+	
 }
 
 func (g *Game) HandleMessage(msg string, player *game.Player) {
@@ -334,8 +335,13 @@ func (g *Game) HandleMessage(msg string, player *game.Player) {
 			cardidx, _ := strconv.Atoi(parts[1])
 			g.PlayCard(player, cardidx)
 			return
-		}
-	} else if command == "draw" {
+		} else if len(parts) == 3 {
+			cardidx, _ := strconv.Atoi(parts[1])
+			newColor := parts[2]
+
+			g.PlayCard(playerPtr, cardidx, newColor)
+			return
+	   } else if command == "draw" {
 		if g.ActivePlayer == player {
 			g.PerformDrawAction(player, 1)
 			g.NextTurn()
