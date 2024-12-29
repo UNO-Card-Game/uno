@@ -2,11 +2,12 @@ package internal
 
 import (
 	"fmt"
-	"github.com/gorilla/websocket"
 	"net/http"
 	"sync"
 	"uno/models/dtos"
 	"uno/models/game"
+
+	"github.com/gorilla/websocket"
 )
 
 type Network struct {
@@ -66,7 +67,14 @@ func (n Network) ListenToClient(player *game.Player, r *Room) {
 	if len(game.Network.clients) == r.maxPlayers && game.GameStarted == false {
 		game.Start()
 		dto := dtos.InfoDTO{Message: "All players have joined. Game has started."}
+		conn_info_dto := dtos.ConnectionDTO{
+			player.Name,
+			r.id,
+			r.maxPlayers,
+			r.game.getAllPlayers(),
+		}
 		game.Network.BroadcastMessage(dto.Serialize())
+		game.Network.BroadcastMessage(conn_info_dto.Serialize())
 	} else {
 		dto := dtos.InfoDTO{Message: "Waiting for players to join the game."}
 		game.Network.BroadcastMessage(dto.Serialize())

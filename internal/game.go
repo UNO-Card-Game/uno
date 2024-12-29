@@ -2,6 +2,7 @@ package internal
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -347,16 +348,38 @@ func (g *Game) HandleMessage(msg string, player *game.Player) {
 }
 
 func (g *Game) SyncAllPlayers() {
-	for _, player := range g.Players {
-		dto := dtos.SyncDTO{
-			Player: *player,
-			Game: dtos.GameState{
-				Topcard: *g.GameTopCard,
-				Turn:    g.ActivePlayer.Name,
-				Reverse: g.GameDirection,
-			},
-		}
-		conn := g.Network.clients[*player]
-		conn.WriteMessage(websocket.TextMessage, dto.Serialize())
+	type syncResult struct {
+		player *game.Player
+		err    error
 	}
+	results := make(chan syncResult)
+	defer close(results)
+
+	for _, player := range g.Players {
+		go func(player *game.Player) {
+			dto := dtos.SyncDTO{
+				Player: *player,
+				Game: dtos.GameState{
+					Topcard: *g.GameTopCard,
+					Turn:    g.ActivePlayer.Name,
+					Reverse: g.GameDirection,
+				},
+			}
+			conn := g.Network.clients[*player]
+			err := conn.WriteMessage(websocket.TextMessage, dto.Serialize())
+			results <- syncResult{player: player, err: err}
+		}(player)
+	}
+
+	// Collect results in a concurrent loop
+	for range g.Players {
+		select {
+		case result := <-results:
+			if result.err != nil {
+				// Handle the error, e.g., log it or retry.
+				log.Printf("Error syncing player %s: %v", result.player.Name, result.err)
+			}
+		}
+	}
+
 }
