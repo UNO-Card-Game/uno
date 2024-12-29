@@ -2,6 +2,7 @@ package internal
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -347,16 +348,35 @@ func (g *Game) HandleMessage(msg string, player *game.Player) {
 }
 
 func (g *Game) SyncAllPlayers() {
+	var wg sync.WaitGroup
+
 	for _, player := range g.Players {
-		dto := dtos.SyncDTO{
-			Player: *player,
-			Game: dtos.GameState{
-				Topcard: *g.GameTopCard,
-				Turn:    g.ActivePlayer.Name,
-				Reverse: g.GameDirection,
-			},
-		}
-		conn := g.Network.clients[*player]
-		conn.WriteMessage(websocket.TextMessage, dto.Serialize())
+		wg.Add(1)
+		go func(player game.Player) {
+			defer wg.Done()
+
+			dto := dtos.SyncDTO{
+				Player: player,
+				Game: dtos.GameState{
+					Topcard: *g.GameTopCard,
+					Turn:    g.ActivePlayer.Name,
+					Reverse: g.GameDirection,
+				},
+			}
+
+			conn := g.Network.clients[player]
+			lock := g.Network.locks[player]
+
+			// Safely write to the WebSocket connection
+			lock.Lock()
+			defer lock.Unlock()
+
+			err := conn.WriteMessage(websocket.TextMessage, dto.Serialize())
+			if err != nil {
+				log.Printf("Failed to sync player %s: %v", player.Name, err)
+			}
+		}(*player)
 	}
+
+	wg.Wait()
 }

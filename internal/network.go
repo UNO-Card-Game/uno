@@ -2,11 +2,12 @@ package internal
 
 import (
 	"fmt"
-	"github.com/gorilla/websocket"
 	"net/http"
 	"sync"
 	"uno/models/dtos"
 	"uno/models/game"
+
+	"github.com/gorilla/websocket"
 )
 
 type Network struct {
@@ -15,7 +16,7 @@ type Network struct {
 	upgrader    websocket.Upgrader
 	broadcast   chan string
 	gameStarted bool
-	mutex       sync.Mutex
+	locks       map[game.Player]*sync.Mutex
 }
 
 func NewNetwork() *Network {
@@ -28,37 +29,38 @@ func NewNetwork() *Network {
 		},
 		broadcast:   make(chan string),
 		gameStarted: false,
-		mutex:       sync.Mutex{},
+		locks:       make(map[game.Player]*sync.Mutex),
 	}
 }
 
 func (n *Network) BroadcastMessages() {
-
 	for {
 		select {
 		case message := <-n.broadcast:
-			for _, conn := range n.clients {
-				// Use a mutex to synchronize writes to the websocket connection
-				n.mutex.Lock()
-				defer n.mutex.Unlock()
-				err := conn.WriteMessage(websocket.TextMessage, []byte(message))
-				if err != nil {
-					if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-						fmt.Printf("Error writing message to client : %v\n", err)
-						err := conn.Close()
-						if err != nil {
-							fmt.Println(err)
-							return
+			for player, conn := range n.clients {
+				go func(player game.Player, conn *websocket.Conn) {
+					// Use the per-player mutex to ensure thread-safe writes
+					lock := n.locks[player]
+					lock.Lock()
+					defer lock.Unlock()
+
+					err := conn.WriteMessage(websocket.TextMessage, []byte(message))
+					if err != nil {
+						if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+							fmt.Printf("Unexpected close error for player %s: %v\n", player.Name, err)
+						} else {
+							fmt.Printf("Error writing message to player %s: %v\n", player.Name, err)
 						}
-					} else {
-						fmt.Println("Error writing message to client:", err)
+
+						// Close the connection and remove the player from the map
+						conn.Close()
+						delete(n.clients, player)
+						delete(n.locks, player)
 					}
-				}
-				n.mutex.Unlock()
+				}(player, conn)
 			}
 		}
 	}
-
 }
 
 func (n Network) ListenToClient(player *game.Player, r *Room) {
@@ -66,7 +68,14 @@ func (n Network) ListenToClient(player *game.Player, r *Room) {
 	if len(game.Network.clients) == r.maxPlayers && game.GameStarted == false {
 		game.Start()
 		dto := dtos.InfoDTO{Message: "All players have joined. Game has started."}
+		conn_info_dto := dtos.ConnectionDTO{
+			player.Name,
+			r.id,
+			r.maxPlayers,
+			r.game.getAllPlayers(),
+		}
 		game.Network.BroadcastMessage(dto.Serialize())
+		game.Network.BroadcastMessage(conn_info_dto.Serialize())
 	} else {
 		dto := dtos.InfoDTO{Message: "Waiting for players to join the game."}
 		game.Network.BroadcastMessage(dto.Serialize())
@@ -94,13 +103,25 @@ func (n Network) BroadcastMessage(message []byte) {
 	n.broadcast <- string(message)
 }
 
-func (n Network) SendMessage(p *game.Player, message string) error {
-	conn := n.clients[*p]
-	n.mutex.Lock()
-	defer n.mutex.Unlock()
+func (n *Network) SendMessage(p *game.Player, message string) error {
+	conn, exists := n.clients[*p]
+	if !exists {
+		return fmt.Errorf("player %s not found in network clients", p.Name)
+	}
+
+	lock, exists := n.locks[*p]
+	if !exists {
+		return fmt.Errorf("no mutex found for player %s", p.Name)
+	}
+
+	// Lock the mutex for the player's connection
+	lock.Lock()
+	defer lock.Unlock()
+
+	// Perform the write operation
 	err := conn.WriteMessage(websocket.TextMessage, []byte(message))
 	if err != nil {
-		return fmt.Errorf("error sending message to p %s: %v", p.Name, err)
+		return fmt.Errorf("error sending message to player %s: %v", p.Name, err)
 	}
 	return nil
 }

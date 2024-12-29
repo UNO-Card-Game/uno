@@ -2,13 +2,15 @@ package internal
 
 import (
 	"fmt"
-	"github.com/gorilla/websocket"
 	"math/rand"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 	"uno/models/dtos"
 	"uno/models/game"
+
+	"github.com/gorilla/websocket"
 )
 
 // Room represents a game room
@@ -75,6 +77,7 @@ func CreateRoomHandler(w http.ResponseWriter, r *http.Request) {
 	res := dto.Serialize()
 	conn := UpgradeWebsocket(w, r, *room)
 	game.Network.clients[*player] = conn
+	game.Network.locks[*player] = &sync.Mutex{}
 	conn.WriteMessage(websocket.TextMessage, res)
 	game.Network.ListenToClient(player, room)
 
@@ -101,6 +104,7 @@ func JoinRoomHandler(w http.ResponseWriter, r *http.Request) {
 	player := AddPlayerToRoom(&w, roomId, playerName)
 	conn := UpgradeWebsocket(w, r, *room)
 	game.Network.clients[*player] = conn
+	game.Network.locks[*player] = &sync.Mutex{}
 
 	dto := dtos.ConnectionDTO{
 		playerName,
