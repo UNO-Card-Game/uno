@@ -348,38 +348,35 @@ func (g *Game) HandleMessage(msg string, player *game.Player) {
 }
 
 func (g *Game) SyncAllPlayers() {
-	type syncResult struct {
-		player *game.Player
-		err    error
-	}
-	results := make(chan syncResult)
-	defer close(results)
+	var wg sync.WaitGroup
 
 	for _, player := range g.Players {
-		go func(player *game.Player) {
+		wg.Add(1)
+		go func(player game.Player) {
+			defer wg.Done()
+
 			dto := dtos.SyncDTO{
-				Player: *player,
+				Player: player,
 				Game: dtos.GameState{
 					Topcard: *g.GameTopCard,
 					Turn:    g.ActivePlayer.Name,
 					Reverse: g.GameDirection,
 				},
 			}
-			conn := g.Network.clients[*player]
+
+			conn := g.Network.clients[player]
+			lock := g.Network.locks[player]
+
+			// Safely write to the WebSocket connection
+			lock.Lock()
+			defer lock.Unlock()
+
 			err := conn.WriteMessage(websocket.TextMessage, dto.Serialize())
-			results <- syncResult{player: player, err: err}
-		}(player)
-	}
-
-	// Collect results in a concurrent loop
-	for range g.Players {
-		select {
-		case result := <-results:
-			if result.err != nil {
-				// Handle the error, e.g., log it or retry.
-				log.Printf("Error syncing player %s: %v", result.player.Name, result.err)
+			if err != nil {
+				log.Printf("Failed to sync player %s: %v", player.Name, err)
 			}
-		}
+		}(*player)
 	}
 
+	wg.Wait()
 }
