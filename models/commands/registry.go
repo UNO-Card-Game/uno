@@ -35,7 +35,7 @@ func GetCommandFactory(commandType string) (CommandFactory, error) {
 
 func init() {
 	RegisterCommand("SYNC_GAME_STATE", func() interface{} { return &SyncCommand{} })
-	RegisterCommand("PLAY_CARD", func() interface{} { return &PlayCardComamnd{} })
+	RegisterCommand("PLAY_CARD", func() interface{} { return &PlayCardCommand{} })
 	RegisterCommand("DRAW_CARD", func() interface{} { return &DrawCardComamnd{} })
 
 }
