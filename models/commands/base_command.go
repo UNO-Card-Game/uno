@@ -10,13 +10,11 @@ type BaseCommand struct {
 	Object json.RawMessage `json:"obj"`
 }
 
-type CommandFactory func() interface{}
-
 func DeserializeCommand(data []byte) (interface{}, error) {
 	// Unmarshal the base command to determine the type
 	var baseCmd BaseCommand
 	if err := json.Unmarshal(data, &baseCmd); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal base command: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal command object: %w", err)
 	}
 
 	// Get the factory for the command type

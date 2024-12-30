@@ -5,6 +5,8 @@ import (
 	"sync"
 )
 
+type CommandFactory func() interface{}
+
 // CommandRegistry maintains a map of command types to their respective factories.
 var CommandRegistry = struct {
 	mu      sync.RWMutex
@@ -33,6 +35,7 @@ func GetCommandFactory(commandType string) (CommandFactory, error) {
 
 func init() {
 	RegisterCommand("SYNC_GAME_STATE", func() interface{} { return &SyncCommand{} })
-	RegisterCommand("PLAYCARD", func() interface{} { return &PlayCardComamnd{} })
+	RegisterCommand("PLAY_CARD", func() interface{} { return &PlayCardComamnd{} })
+	RegisterCommand("DRAW_CARD", func() interface{} { return &DrawCardComamnd{} })
 
 }
