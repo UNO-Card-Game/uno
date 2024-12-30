@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
+	"uno/models/commands"
 	"uno/models/constants/color"
 	"uno/models/constants/rank"
 	"uno/models/dtos"
@@ -93,7 +92,7 @@ func (g *Game) NextTurn() {
 
 		// If the player still doesn't have a playable card after drawing, skip their turn
 		if !playableCard {
-			g.Network.SendMessage(nextPlayer, "You don't have a playable card")
+			g.Network.SendMessageOld(nextPlayer, "You don't have a playable card")
 			g.skipNextTurn()
 			g.NextTurn() // Call NextTurn again to move to the next player
 			return
@@ -102,7 +101,7 @@ func (g *Game) NextTurn() {
 	}
 	g.CurrentTurn = nextTurn
 	g.ActivePlayer = g.Players[g.CurrentTurn]
-	g.Network.SendMessage(g.ActivePlayer, fmt.Sprintf("It's your turn, %s! ", g.ActivePlayer.Name))
+	g.Network.SendMessageOld(g.ActivePlayer, fmt.Sprintf("It's your turn, %s! ", g.ActivePlayer.Name))
 	//g.DisposedGameDeck
 
 	//g.ActivePlayer.Send()
@@ -132,7 +131,7 @@ func (g *Game) PlayCard(player *game.Player, cardIdx int, newColorStr ...string)
 			newColor, err := color.ParseColor(newColorStr[0])
 			card.Color = newColor // Set the card's color to the new color
 			if err != nil {
-				g.Network.SendMessage(player, "Invalid color choice.Try again with correct color <blue,red,green,yellow>")
+				g.Network.SendMessageOld(player, "Invalid color choice.Try again with correct color <blue,red,green,yellow>")
 				return
 			}
 
@@ -143,7 +142,7 @@ func (g *Game) PlayCard(player *game.Player, cardIdx int, newColorStr ...string)
 			g.GameTopCard = &card
 
 			for _, p := range g.Players {
-				g.Network.SendMessage(p, fmt.Sprintf("%s played %s and changed the color to %s", player.Name, card.LogCard(), newColor))
+				g.Network.SendMessageOld(p, fmt.Sprintf("%s played %s and changed the color to %s", player.Name, card.LogCard(), newColor))
 			}
 			// Perform additional game logic for  DRAW4 card
 			if card.Rank == rank.DRAW_4 {
@@ -151,10 +150,10 @@ func (g *Game) PlayCard(player *game.Player, cardIdx int, newColorStr ...string)
 				g.skipNextTurn()
 
 			}
-			g.Network.SendMessage(player, "Your turn is over.")
+			g.Network.SendMessageOld(player, "Your turn is over.")
 			g.NextTurn()
 		} else {
-			g.Network.SendMessage(player, "Invalid move.Add New Color to WILD or DRAW_4 in format playcard <cardIndex> <color>. Try again !!")
+			g.Network.SendMessageOld(player, "Invalid move.Add New Color to WILD or DRAW_4 in format playcard <cardIndex> <color>. Try again !!")
 			return
 		}
 
@@ -166,7 +165,7 @@ func (g *Game) PlayCard(player *game.Player, cardIdx int, newColorStr ...string)
 			g.dealwithActionCards(card)
 		}
 		for _, p := range g.Players {
-			g.Network.SendMessage(p, fmt.Sprintf("%s played %s", player.Name, card.LogCard()))
+			g.Network.SendMessageOld(p, fmt.Sprintf("%s played %s", player.Name, card.LogCard()))
 		}
 
 		// Add the card to the disposed deck
@@ -175,11 +174,11 @@ func (g *Game) PlayCard(player *game.Player, cardIdx int, newColorStr ...string)
 		g.GameTopCard = &disposedCard
 
 		// Move to the next turn
-		g.Network.SendMessage(player, "Your turn is over.")
+		g.Network.SendMessageOld(player, "Your turn is over.")
 		g.NextTurn()
 	} else {
 		// Notify the player that the move is invalid
-		g.Network.SendMessage(player, "Invalid move.Wrong card or wrong player . Try again.")
+		g.Network.SendMessageOld(player, "Invalid move.Wrong card or wrong player . Try again.")
 	}
 }
 
@@ -208,9 +207,9 @@ func (g *Game) PerformDrawAction(player *game.Player, card_count int) {
 	cardsDrawn := g.GameDeck.Cut(card_count)
 	player.AddCards(cardsDrawn)
 	for _, card := range cardsDrawn {
-		g.Network.SendMessage(player, fmt.Sprintf("%s Drew %s", player.Name, card.LogCard()))
+		g.Network.SendMessageOld(player, fmt.Sprintf("%s Drew %s", player.Name, card.LogCard()))
 	}
-	g.Network.SendMessage(player, fmt.Sprintf("%s Drew Drew %d cards  ", player.Name, card_count))
+	g.Network.SendMessageOld(player, fmt.Sprintf("%s Drew Drew %d cards  ", player.Name, card_count))
 
 }
 func (g *Game) ShuffleDiscardPileToDeck() {
@@ -238,7 +237,7 @@ func (g *Game) reverseGameDirection() {
 // skipNextTurn skips the next player's turn
 func (g *Game) skipNextTurn() {
 	nextPlayer := g.getNextPlayer()
-	g.Network.SendMessage(nextPlayer, "Your turn is SKIPPED.......... ")
+	g.Network.SendMessageOld(nextPlayer, "Your turn is SKIPPED.......... ")
 
 	g.swtichtoNextPlayer()
 }
@@ -246,17 +245,17 @@ func (g *Game) skipNextTurn() {
 // declareWinner declares the winner of the game
 func (g *Game) declareWinner(winner *game.Player) {
 	for _, p := range g.Players {
-		g.Network.SendMessage(p, fmt.Sprintf("%s HAS WON THE GAME!!!!", winner.Name))
+		g.Network.SendMessageOld(p, fmt.Sprintf("%s HAS WON THE GAME!!!!", winner.Name))
 	}
 	for _, p := range g.Players {
-		g.Network.SendMessage(p, fmt.Sprintf("GAME OVER  %s ,CLOSING CONNECTION ", winner.Name))
+		g.Network.SendMessageOld(p, fmt.Sprintf("GAME OVER  %s ,CLOSING CONNECTION ", winner.Name))
 		g.Network.CloseConnection(p)
 	}
 	// Perform any necessary  end-game animation with bubbleTea
 }
 func (g *Game) checkforUNO(player *game.Player) {
 	for _, p := range g.Players {
-		g.Network.SendMessage(p, fmt.Sprintf("UNO !!!! by %s ", player.Name))
+		g.Network.SendMessageOld(p, fmt.Sprintf("UNO !!!! by %s ", player.Name))
 	}
 	// Perform any necessary  end-game animation with bubbleTea
 }
@@ -308,74 +307,103 @@ func (g *Game) swtichtoNextPlayer() {
 	}
 }
 
-func (g *Game) HandleMessage(msg string, player *game.Player) {
+// Decomission this function
+// func (g *Game) HandleMessage(msg string, player *game.Player) {
+// 	g.SyncAllPlayers()
+// 	parts := strings.Split(msg, " ")
+// 	command := parts[0]
+
+// 	conn := g.Network.clients[*player]
+
+// 	// Find the player index in the Players slice
+// 	if command == "sync" {
+// 		g.SyncPlayer(player)
+// 	} else if command == "playcard" {
+// 		if len(parts) < 2 {
+// 			// Handle invalid command format
+// 			conn.WriteMessage(websocket.TextMessage, []byte("Invalid command format.\n Usage: playcard <cardIndex> and Usage: playcard <cardIndex> <color> for DRAW 4 and WILD"))
+
+// 		} else if len(parts) == 2 {
+// 			cardidx, _ := strconv.Atoi(parts[1])
+// 			g.PlayCard(player, cardidx)
+// 			return
+// 		}
+// 	} else if command == "draw" {
+// 		if g.ActivePlayer == player {
+// 			g.PerformDrawAction(player, 1)
+// 			g.NextTurn()
+// 		}
+
+// 	} else {
+// 		conn.WriteMessage(websocket.TextMessage, []byte("Invalid command format"))
+// 	}
+// }
+
+func (g *Game) HandleCommand(data []byte, player *game.Player) {
 	g.SyncAllPlayers()
-	parts := strings.Split(msg, " ")
-	command := parts[0]
+	cmd, err := commands.DeserializeCommand(data)
+	if err != nil {
+		log.Fatalf("Failed to deserialize command: %v", err)
+	}
 
-	conn := g.Network.clients[*player]
-
-	// Find the player index in the Players slice
-	if command == "sync" {
-		dto := dtos.SyncDTO{
-			Player: *player,
-			Game: dtos.GameState{
-				Topcard: *g.GameTopCard,
-				Turn:    g.ActivePlayer.Name,
-				Reverse: g.GameDirection,
-			},
-		}
-		conn.WriteMessage(websocket.TextMessage, dto.Serialize())
-	} else if command == "playcard" {
-		if len(parts) < 2 {
-			// Handle invalid command format
-			conn.WriteMessage(websocket.TextMessage, []byte("Invalid command format.\n Usage: playcard <cardIndex> and Usage: playcard <cardIndex> <color> for DRAW 4 and WILD"))
-
-		} else if len(parts) == 2 {
-			cardidx, _ := strconv.Atoi(parts[1])
-			g.PlayCard(player, cardidx)
-			return
-		}
-	} else if command == "draw" {
+	switch c := cmd.(type) {
+	case *commands.SyncCommand:
+		g.SyncPlayer(player)
+	case *commands.PlayCardCommand:
+		g.PlayCard(player, c.CardIndex)
+	case *commands.DrawCardComamnd:
 		if g.ActivePlayer == player {
 			g.PerformDrawAction(player, 1)
 			g.NextTurn()
 		}
+	default:
+		fmt.Println("Unknown command type")
 
-	} else {
-		conn.WriteMessage(websocket.TextMessage, []byte("Invalid command format"))
+	}
+
+}
+
+func (g *Game) SyncPlayer(p *game.Player) {
+	conn, ok := g.Network.clients[*p]
+	if !ok {
+		log.Printf("Player %s not found in network clients", p.Name)
+		return
+	}
+
+	lock, ok := g.Network.locks[*p]
+	if !ok {
+		log.Printf("No mutex found for player %s", p.Name)
+		return
+	}
+
+	dto := dtos.SyncDTO{
+		Player: *p,
+		Game: dtos.GameState{
+			Topcard: *g.GameTopCard,
+			Turn:    g.ActivePlayer.Name,
+			Reverse: g.GameDirection,
+		},
+	}
+
+	lock.Lock()
+	defer lock.Unlock()
+
+	err := conn.WriteMessage(websocket.TextMessage, dto.Serialize())
+	if err != nil {
+		log.Printf("Failed to sync player %s: %v", p.Name, err)
 	}
 }
 
 func (g *Game) SyncAllPlayers() {
 	var wg sync.WaitGroup
 
-	for _, player := range g.Players {
+	for _, playerPtr := range g.Players {
 		wg.Add(1)
-		go func(player game.Player) {
+
+		go func(player *game.Player) {
 			defer wg.Done()
-
-			dto := dtos.SyncDTO{
-				Player: player,
-				Game: dtos.GameState{
-					Topcard: *g.GameTopCard,
-					Turn:    g.ActivePlayer.Name,
-					Reverse: g.GameDirection,
-				},
-			}
-
-			conn := g.Network.clients[player]
-			lock := g.Network.locks[player]
-
-			// Safely write to the WebSocket connection
-			lock.Lock()
-			defer lock.Unlock()
-
-			err := conn.WriteMessage(websocket.TextMessage, dto.Serialize())
-			if err != nil {
-				log.Printf("Failed to sync player %s: %v", player.Name, err)
-			}
-		}(*player)
+			g.SyncPlayer(player)
+		}(playerPtr)
 	}
 
 	wg.Wait()

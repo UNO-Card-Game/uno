@@ -75,7 +75,7 @@ func (n Network) ListenToClient(player *game.Player, r *Room) {
 			r.game.getAllPlayers(),
 		}
 		game.Network.BroadcastMessage(dto.Serialize())
-		game.Network.BroadcastMessage(conn_info_dto.Serialize())
+		game.Network.SendMessage(player, conn_info_dto.Serialize())
 	} else {
 		dto := dtos.InfoDTO{Message: "Waiting for players to join the game."}
 		game.Network.BroadcastMessage(dto.Serialize())
@@ -87,15 +87,9 @@ func (n Network) ListenToClient(player *game.Player, r *Room) {
 			return
 		}
 
-		// Add your own logic here to filter out certain messages
-		game.HandleMessage(string(msg), player)
+		// game.HandleMessage(string(msg), player)
+		game.HandleCommand(msg, player)
 
-		// Before broadcasting them to other clients
-		if ShouldBroadcast(string(msg)) {
-			// Print the message to the console
-			//fmt.Printf("%s sent: %s\n", clientName, string(msg))
-			n.broadcast <- fmt.Sprintf("%s: %s", player.Name, string(msg))
-		}
 	}
 }
 
@@ -103,7 +97,8 @@ func (n Network) BroadcastMessage(message []byte) {
 	n.broadcast <- string(message)
 }
 
-func (n *Network) SendMessage(p *game.Player, message string) error {
+// TODO: Decomission this function
+func (n *Network) SendMessageOld(p *game.Player, message string) error {
 	conn, exists := n.clients[*p]
 	if !exists {
 		return fmt.Errorf("player %s not found in network clients", p.Name)
@@ -120,6 +115,29 @@ func (n *Network) SendMessage(p *game.Player, message string) error {
 
 	// Perform the write operation
 	err := conn.WriteMessage(websocket.TextMessage, []byte(message))
+	if err != nil {
+		return fmt.Errorf("error sending message to player %s: %v", p.Name, err)
+	}
+	return nil
+}
+
+func (n *Network) SendMessage(p *game.Player, message []byte) error {
+	conn, exists := n.clients[*p]
+	if !exists {
+		return fmt.Errorf("player %s not found in network clients", p.Name)
+	}
+
+	lock, exists := n.locks[*p]
+	if !exists {
+		return fmt.Errorf("no mutex found for player %s", p.Name)
+	}
+
+	// Lock the mutex for the player's connection
+	lock.Lock()
+	defer lock.Unlock()
+
+	// Perform the write operation
+	err := conn.WriteMessage(websocket.TextMessage, message)
 	if err != nil {
 		return fmt.Errorf("error sending message to player %s: %v", p.Name, err)
 	}

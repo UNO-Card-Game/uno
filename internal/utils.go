@@ -4,18 +4,6 @@ import (
 	"uno/models/game"
 )
 
-func ShouldBroadcast(msg string) bool {
-	privateCommands := []string{"showcards,playcard"}
-
-	for _, command := range privateCommands {
-		if command == msg {
-			return false
-		}
-	}
-
-	return true
-}
-
 func convertDirectionToInteger(direction bool) int {
 	if direction {
 		return 1
