@@ -20,7 +20,7 @@ type Room struct {
 	maxPlayers int  `json:"max_players"`
 }
 
-const MAX_ROOMS = 100
+const MAX_ROOMS = 1
 
 var rooms map[int]*Room
 
@@ -68,17 +68,18 @@ func CreateRoomHandler(w http.ResponseWriter, r *http.Request) {
 	player := AddPlayerToRoom(&w, roomId, playerName)
 
 	// Respond with the room id
+	conn := UpgradeWebsocket(w, r, *room)
+	game.Network.clients[*player] = conn
+	game.Network.locks[*player] = &sync.Mutex{}
+
 	dto := dtos.ConnectionDTO{
 		playerName,
 		room.id,
 		maxPlayers,
 		room.game.getAllPlayers(),
 	}
-	res := dto.Serialize()
-	conn := UpgradeWebsocket(w, r, *room)
-	game.Network.clients[*player] = conn
-	game.Network.locks[*player] = &sync.Mutex{}
-	conn.WriteMessage(websocket.TextMessage, res)
+	conn.WriteMessage(websocket.TextMessage, dto.Serialize())
+
 	game.Network.ListenToClient(player, room)
 
 }

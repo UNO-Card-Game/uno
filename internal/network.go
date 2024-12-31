@@ -18,6 +18,7 @@ type Network struct {
 	syncChannel chan string
 	gameStarted bool
 	locks       map[game.Player]*sync.Mutex
+	wg          *sync.WaitGroup
 }
 
 func NewNetwork() *Network {
@@ -31,6 +32,7 @@ func NewNetwork() *Network {
 		broadcast:   make(chan string),
 		gameStarted: false,
 		locks:       make(map[game.Player]*sync.Mutex),
+		wg:          &sync.WaitGroup{},
 	}
 }
 
@@ -38,9 +40,16 @@ func (n *Network) BroadcastMessages() {
 	for {
 		select {
 		case message := <-n.broadcast:
+			// Increment the WaitGroup counter for the number of clients
+			clientCount := len(n.clients)
+			if clientCount > 0 {
+				n.wg.Add(clientCount)
+			}
+
+			// Broadcast the message to all players
 			for player, conn := range n.clients {
-				go func(player game.Player, conn *websocket.Conn) {
-					// Use the per-player mutex to ensure thread-safe writes
+				go func(player game.Player, conn *websocket.Conn, message string) {
+					defer n.wg.Done() // Ensure this corresponds to Add above
 					lock := n.locks[player]
 					lock.Lock()
 					defer lock.Unlock()
@@ -58,15 +67,20 @@ func (n *Network) BroadcastMessages() {
 						delete(n.clients, player)
 						delete(n.locks, player)
 					}
-				}(player, conn)
+				}(player, conn, message)
 			}
+
+			// Wait for all goroutines to finish broadcasting this message
+			n.wg.Wait()
 		}
 	}
 }
 
 func (n Network) ListenToClient(player *game.Player, r *Room) {
 	game := r.game
-	if len(game.Network.clients) == r.maxPlayers && game.GameStarted == false {
+	go game.Network.BroadcastMessages()
+
+	if (len(game.Network.clients) == r.maxPlayers) && (game.GameStarted == false) {
 		game.Start()
 		conn_info_dto := dtos.ConnectionDTO{
 			player.Name,
@@ -77,8 +91,7 @@ func (n Network) ListenToClient(player *game.Player, r *Room) {
 		game.Network.SendMessage(player, conn_info_dto.Serialize())
 		game.Network.BroadcastInfoMessage("All players have joined. Game has started.")
 	} else {
-		dto := dtos.InfoDTO{Message: "Waiting for players to join the game."}
-		game.Network.BroadcastMessage(dto.Serialize())
+		game.Network.BroadcastInfoMessage("Waiting for players to join the game.")
 	}
 	conn := n.clients[*player]
 	for {

@@ -115,7 +115,6 @@ func (g *Game) Start() {
 	g.GameFirstMove = true
 	g.ActivePlayer = g.Players[g.CurrentTurn] //g.Players is already a pointer
 	g.GameStarted = true
-	go g.Network.BroadcastMessages()
 	go g.SyncAllPlayers()
 }
 func (g *Game) PlayCard(player *game.Player, cardIdx int, newColorStr ...string) {
@@ -336,7 +335,7 @@ func (g *Game) swtichtoNextPlayer() {
 // }
 
 func (g *Game) HandleCommand(data []byte, player *game.Player) {
-	g.SyncAllPlayers()
+	// g.SyncAllPlayers()
 	cmd, err := commands.DeserializeCommand(data)
 	if err != nil {
 		log.Fatalf("Failed to deserialize command: %v", err)
@@ -346,7 +345,10 @@ func (g *Game) HandleCommand(data []byte, player *game.Player) {
 	case *commands.SyncCommand:
 		g.SyncPlayer(player)
 	case *commands.PlayCardCommand:
-		g.PlayCard(player, c.CardIndex)
+		if g.ActivePlayer == player {
+			g.PlayCard(player, c.CardIndex)
+			g.NextTurn()
+		}
 	case *commands.DrawCardComamnd:
 		if g.ActivePlayer == player {
 			g.PerformDrawAction(player, 1)
