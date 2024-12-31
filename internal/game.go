@@ -131,7 +131,7 @@ func (g *Game) PlayCard(player *game.Player, cardIdx int, newColorStr ...string)
 			newColor, err := color.ParseColor(newColorStr[0])
 			card.Color = newColor // Set the card's color to the new color
 			if err != nil {
-				g.Network.SendMessageOld(player, "Invalid color choice.Try again with correct color <blue,red,green,yellow>")
+				g.Network.SendInfoMessage(player, "Invalid color choice.Try again with correct color <blue,red,green,yellow>")
 				return
 			}
 
@@ -141,19 +141,18 @@ func (g *Game) PlayCard(player *game.Player, cardIdx int, newColorStr ...string)
 			g.DisposedGameDeck.AddCard(disposedCard)
 			g.GameTopCard = &card
 
-			for _, p := range g.Players {
-				g.Network.SendMessageOld(p, fmt.Sprintf("%s played %s and changed the color to %s", player.Name, card.LogCard(), newColor))
-			}
+			g.Network.BroadcastInfoMessage(fmt.Sprintf("%s played %s and changed the color to %s", player.Name, card.LogCard(), newColor))
+
 			// Perform additional game logic for  DRAW4 card
 			if card.Rank == rank.DRAW_4 {
 				g.PerformDrawAction(g.getNextPlayer(), 4)
 				g.skipNextTurn()
 
 			}
-			g.Network.SendMessageOld(player, "Your turn is over.")
+			g.Network.SendInfoMessage(player, "Your turn is over.")
 			g.NextTurn()
 		} else {
-			g.Network.SendMessageOld(player, "Invalid move.Add New Color to WILD or DRAW_4 in format playcard <cardIndex> <color>. Try again !!")
+			g.Network.SendInfoMessage(player, "Invalid move.Add New Color to WILD or DRAW_4 in format playcard <cardIndex> <color>. Try again !!")
 			return
 		}
 
@@ -164,9 +163,7 @@ func (g *Game) PlayCard(player *game.Player, cardIdx int, newColorStr ...string)
 		if card.Type() == "action-card" {
 			g.dealwithActionCards(card)
 		}
-		for _, p := range g.Players {
-			g.Network.SendMessageOld(p, fmt.Sprintf("%s played %s", player.Name, card.LogCard()))
-		}
+		g.Network.BroadcastInfoMessage(fmt.Sprintf("%s played %s", player.Name, card.LogCard()))
 
 		// Add the card to the disposed deck
 		disposedCard := player.Deck.RemoveCard(cardIdx)
@@ -174,11 +171,10 @@ func (g *Game) PlayCard(player *game.Player, cardIdx int, newColorStr ...string)
 		g.GameTopCard = &disposedCard
 
 		// Move to the next turn
-		g.Network.SendMessageOld(player, "Your turn is over.")
-		g.NextTurn()
+		g.Network.SendInfoMessage(player, "Your turn is over.")
 	} else {
 		// Notify the player that the move is invalid
-		g.Network.SendMessageOld(player, "Invalid move.Wrong card or wrong player . Try again.")
+		g.Network.SendInfoMessage(player, "Invalid move.Wrong card or wrong player . Try again.")
 	}
 }
 
