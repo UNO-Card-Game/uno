@@ -351,6 +351,11 @@ func (g *Game) SyncPlayer(p *game.Player) {
 			Turn:    activePlayer.Name,
 			Reverse: g.GameDirection,
 		},
+		Room: dtos.RoomState{
+			Players:    g.getAllPlayers(),
+			RoomId:     g.Room.id,
+			MaxPlayers: g.Room.maxPlayers,
+		},
 	}
 
 	conn, ok := g.Network.clients[*p]

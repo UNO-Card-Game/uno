@@ -17,7 +17,7 @@ type GameState struct {
 }
 
 type RoomState struct {
-	Players    []game.Player `json:"players"`
+	Players    []string `json:"players"`
 	RoomId     int           `json:"id"`
 	MaxPlayers int           `json:"max_players"`
 }
