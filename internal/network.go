@@ -142,30 +142,6 @@ func (n *Network) BroadcastMessage(message []byte) {
 	n.broadcast <- string(message)
 }
 
-// TODO: Decomission this function
-func (n *Network) SendMessageOld(p *game.Player, message string) error {
-	conn, exists := n.clients[*p]
-	if !exists {
-		return fmt.Errorf("player %s not found in network clients", p.Name)
-	}
-
-	lock, exists := n.locks[*p]
-	if !exists {
-		return fmt.Errorf("no mutex found for player %s", p.Name)
-	}
-
-	// Lock the mutex for the player's connection
-	lock.Lock()
-	defer lock.Unlock()
-
-	// Perform the write operation
-	err := conn.WriteMessage(websocket.TextMessage, []byte(message))
-	if err != nil {
-		return fmt.Errorf("error sending message to player %s: %v", p.Name, err)
-	}
-	return nil
-}
-
 func (n *Network) SendMessage(p *game.Player, message []byte) error {
 	conn, exists := n.clients[*p]
 	if !exists {

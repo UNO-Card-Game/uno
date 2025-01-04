@@ -60,8 +60,6 @@ func (g *Game) AddPlayer(player *game.Player) {
 
 
 func (g *Game) NextTurn() {
-	// g.ActivePlayer.mu.Lock()
-	// defer g.ActivePlayer.mu.Unlock()
 	//check for Game winner
 	if g.ActivePlayer.Deck.NumberOfCards() == 0 {
 		g.declareWinner(g.ActivePlayer)
@@ -79,7 +77,6 @@ func (g *Game) NextTurn() {
 	}
 
 	nextPlayer := g.Players[nextTurn]
-	//nextPlayer.Send("About TO DRAWWWWWW CARDSSSS")
 	topCard := g.GameTopCard
 	playableCard := nextPlayer.HasPlayableCard(topCard)
 	if !playableCard {
@@ -93,7 +90,7 @@ func (g *Game) NextTurn() {
 
 		// If the player still doesn't have a playable card after drawing, skip their turn
 		if !playableCard {
-			g.Network.SendMessageOld(nextPlayer, "You don't have a playable card")
+			g.Network.SendInfoMessage(nextPlayer, "You don't have a playable card")
 			g.skipNextTurn()
 			g.NextTurn() // Call NextTurn again to move to the next player
 			return
@@ -102,21 +99,18 @@ func (g *Game) NextTurn() {
 	}
 	g.CurrentTurn = nextTurn
 	g.ActivePlayer = g.Players[g.CurrentTurn]
-	g.Network.SendMessageOld(g.ActivePlayer, fmt.Sprintf("It's your turn, %s! ", g.ActivePlayer.Name))
-	//g.DisposedGameDeck
+	g.Network.SendInfoMessage(g.ActivePlayer, "It is your turn.")
 
-	//g.ActivePlayer.Send()
 }
 func (g *Game) Start() {
-	// g.mu.Lock()
-	// defer g.mu.Unlock()
-
 	// Start the first player's turn
 	g.CurrentTurn = 0
 	g.GameFirstMove = true
 	g.ActivePlayer = g.Players[g.CurrentTurn]
 	g.GameStarted = true
 }
+
+
 func (g *Game) PlayCard(player *game.Player, cardIdx int, newColorStr ...string) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -202,9 +196,9 @@ func (g *Game) PerformDrawAction(player *game.Player, card_count int) {
 	cardsDrawn := g.GameDeck.Cut(card_count)
 	player.AddCards(cardsDrawn)
 	for _, card := range cardsDrawn {
-		g.Network.SendMessageOld(player, fmt.Sprintf("%s Drew %s", player.Name, card.LogCard()))
+		g.Network.SendInfoMessage(player, fmt.Sprintf("%s Drew %s", player.Name, card.LogCard()))
 	}
-	g.Network.SendMessageOld(player, fmt.Sprintf("%s Drew Drew %d cards  ", player.Name, card_count))
+	g.Network.SendInfoMessage(player, fmt.Sprintf("%s Drew Drew %d cards  ", player.Name, card_count))
 
 }
 func (g *Game) ShuffleDiscardPileToDeck() {
@@ -232,7 +226,7 @@ func (g *Game) reverseGameDirection() {
 // skipNextTurn skips the next player's turn
 func (g *Game) skipNextTurn() {
 	nextPlayer := g.getNextPlayer()
-	g.Network.SendMessageOld(nextPlayer, "Your turn is SKIPPED.......... ")
+	g.Network.SendInfoMessage(nextPlayer, "Your turn is SKIPPED")
 
 	g.swtichtoNextPlayer()
 }
@@ -240,19 +234,18 @@ func (g *Game) skipNextTurn() {
 // declareWinner declares the winner of the game
 func (g *Game) declareWinner(winner *game.Player) {
 	for _, p := range g.Players {
-		g.Network.SendMessageOld(p, fmt.Sprintf("%s HAS WON THE GAME!!!!", winner.Name))
+		g.Network.SendInfoMessage(p, fmt.Sprintf("%s HAS WON THE GAME!!!!", winner.Name))
 	}
 	for _, p := range g.Players {
-		g.Network.SendMessageOld(p, fmt.Sprintf("GAME OVER  %s ,CLOSING CONNECTION ", winner.Name))
+		g.Network.SendInfoMessage(p, fmt.Sprintf("GAME OVER  %s ,CLOSING CONNECTION ", winner.Name))
 		g.Network.CloseConnection(p)
 	}
 	// Perform any necessary  end-game animation with bubbleTea
 }
 func (g *Game) checkforUNO(player *game.Player) {
 	for _, p := range g.Players {
-		g.Network.SendMessageOld(p, fmt.Sprintf("UNO !!!! by %s ", player.Name))
+		g.Network.SendInfoMessage(p, fmt.Sprintf("UNO !!!! by %s ", player.Name))
 	}
-	// Perform any necessary  end-game animation with bubbleTea
 }
 
 // getNextPlayer returns the next player based on the game direction
