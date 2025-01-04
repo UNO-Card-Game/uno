@@ -33,11 +33,7 @@ func (player *Player) AddCards(cards []Card) {
 	}
 }
 
-func (p *Player) HasPlayableCard(topCard *Card) bool {
-	if topCard == nil {
-		// If topCard is a null pointer i.e first card is draw or wildcard, return true
-		return true
-	}
+func (p *Player) HasPlayableCard(topCard Card) bool {
 
 	for _, card := range p.Deck.Cards {
 		switch {

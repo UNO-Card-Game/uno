@@ -1,6 +1,7 @@
 package dtos
 
 import (
+	"uno/models/constants/color"
 	"uno/models/game"
 )
 
@@ -11,7 +12,8 @@ type SyncDTO struct {
 }
 
 type GameState struct {
-	Topcard game.Card `json:"topcard"`
+	TopCard game.Card `json:"topcard"`
+	TopColor color.Color `json:"topcolor"`
 	Turn    string    `json:"turn"`
 	Reverse bool      `json:"reverse"`
 }
