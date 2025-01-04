@@ -5,7 +5,6 @@ import (
 	"math/rand"
 	"net/http"
 	"strconv"
-	"sync"
 	"time"
 	"uno/models/dtos"
 	"uno/models/game"
@@ -69,8 +68,7 @@ func CreateRoomHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Respond with the room id
 	conn := UpgradeWebsocket(w, r, *room)
-	game.Network.clients[*player] = conn
-	game.Network.locks[*player] = &sync.Mutex{}
+	game.Network.AddClient(*player, conn)
 
 	dto := dtos.ConnectionDTO{
 		playerName,

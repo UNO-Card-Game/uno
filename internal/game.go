@@ -58,6 +58,7 @@ func (g *Game) AddPlayer(player *game.Player) {
 	g.Players = append(g.Players, player)
 }
 
+
 func (g *Game) NextTurn() {
 	// g.ActivePlayer.mu.Lock()
 	// defer g.ActivePlayer.mu.Unlock()
@@ -113,9 +114,8 @@ func (g *Game) Start() {
 	// Start the first player's turn
 	g.CurrentTurn = 0
 	g.GameFirstMove = true
-	g.ActivePlayer = g.Players[g.CurrentTurn] //g.Players is already a pointer
+	g.ActivePlayer = g.Players[g.CurrentTurn]
 	g.GameStarted = true
-	go g.SyncAllPlayers()
 }
 func (g *Game) PlayCard(player *game.Player, cardIdx int, newColorStr ...string) {
 	g.mu.Lock()
@@ -302,40 +302,7 @@ func (g *Game) swtichtoNextPlayer() {
 	}
 }
 
-// Decomission this function
-// func (g *Game) HandleMessage(msg string, player *game.Player) {
-// 	g.SyncAllPlayers()
-// 	parts := strings.Split(msg, " ")
-// 	command := parts[0]
-
-// 	conn := g.Network.clients[*player]
-
-// 	// Find the player index in the Players slice
-// 	if command == "sync" {
-// 		g.SyncPlayer(player)
-// 	} else if command == "playcard" {
-// 		if len(parts) < 2 {
-// 			// Handle invalid command format
-// 			conn.WriteMessage(websocket.TextMessage, []byte("Invalid command format.\n Usage: playcard <cardIndex> and Usage: playcard <cardIndex> <color> for DRAW 4 and WILD"))
-
-// 		} else if len(parts) == 2 {
-// 			cardidx, _ := strconv.Atoi(parts[1])
-// 			g.PlayCard(player, cardidx)
-// 			return
-// 		}
-// 	} else if command == "draw" {
-// 		if g.ActivePlayer == player {
-// 			g.PerformDrawAction(player, 1)
-// 			g.NextTurn()
-// 		}
-
-// 	} else {
-// 		conn.WriteMessage(websocket.TextMessage, []byte("Invalid command format"))
-// 	}
-// }
-
 func (g *Game) HandleCommand(data []byte, player *game.Player) {
-	// g.SyncAllPlayers()
 	cmd, err := commands.DeserializeCommand(data)
 	if err != nil {
 		log.Fatalf("Failed to deserialize command: %v", err)
@@ -349,19 +316,51 @@ func (g *Game) HandleCommand(data []byte, player *game.Player) {
 			g.PlayCard(player, c.CardIndex)
 			g.NextTurn()
 		}
+		g.SyncAllPlayers()
 	case *commands.DrawCardComamnd:
 		if g.ActivePlayer == player {
 			g.PerformDrawAction(player, 1)
 			g.NextTurn()
 		}
+		g.SyncAllPlayers()
 	default:
-		fmt.Println("Unknown command type")
+		log.Printf("Unknown command type: %T", c)
 
 	}
 
 }
 
 func (g *Game) SyncPlayer(p *game.Player) {
+	if p == nil {
+		log.Printf("Cannot sync a nil player")
+		return
+	}
+
+	if g.GameTopCard == nil {
+		log.Printf("GameTopCard is nil; cannot sync player %s", p.Name)
+		return
+	}
+
+	activePlayer := g.ActivePlayer
+	if activePlayer == nil {
+		log.Printf("ActivePlayer is nil; cannot sync")
+		return
+	}
+
+	if activePlayer.Name == "" {
+		log.Printf("ActivePlayer's Name is empty; cannot sync")
+		return
+	}
+
+	dto := dtos.SyncDTO{
+		Player: *p,
+		Game: dtos.GameState{
+			Topcard: *g.GameTopCard,
+			Turn:    activePlayer.Name,
+			Reverse: g.GameDirection,
+		},
+	}
+
 	conn, ok := g.Network.clients[*p]
 	if !ok {
 		log.Printf("Player %s not found in network clients", p.Name)
@@ -372,15 +371,6 @@ func (g *Game) SyncPlayer(p *game.Player) {
 	if !ok {
 		log.Printf("No mutex found for player %s", p.Name)
 		return
-	}
-
-	dto := dtos.SyncDTO{
-		Player: *p,
-		Game: dtos.GameState{
-			Topcard: *g.GameTopCard,
-			Turn:    g.ActivePlayer.Name,
-			Reverse: g.GameDirection,
-		},
 	}
 
 	lock.Lock()
