@@ -13,6 +13,14 @@ tasks:
         go build -o bin/server cmd/uno/*.go;
         fi
 
+  build:image:
+    desc: "Build the Docker Image from the Binary"
+    cmds:
+      - docker buildx create --use
+      - docker buildx build --platform linux/amd64,linux/arm64 -t uno-server:latest .
+    deps:
+      - build:server
+
   run:server:
     desc: "Run the server"
     cmds:
@@ -23,11 +31,6 @@ tasks:
         fi
     deps:
       - build:server
-
-  run:client:
-    desc: "Run the client"
-    cmds:
-      - wscat -c ws://localhost:8080/ws
 
   debug:server:
     desc: "Run the server in debug mode"

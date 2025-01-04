@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  uno_server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+    restart: always
+    container_name: uno_server
