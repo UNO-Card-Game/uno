@@ -19,6 +19,7 @@ type Game struct {
 	Players          []*game.Player
 	GameDeck         *game.GameDeck
 	DisposedGameDeck *game.GameDeck
+	Room             *Room
 	GameStarted      bool
 	CurrentTurn      int
 	GameDirection    bool
@@ -57,7 +58,6 @@ func (g *Game) AddPlayer(player *game.Player) {
 	player.AddCards(g.GameDeck.Cut(7))
 	g.Players = append(g.Players, player)
 }
-
 
 func (g *Game) NextTurn() {
 	//check for Game winner
@@ -109,7 +109,6 @@ func (g *Game) Start() {
 	g.ActivePlayer = g.Players[g.CurrentTurn]
 	g.GameStarted = true
 }
-
 
 func (g *Game) PlayCard(player *game.Player, cardIdx int, newColorStr ...string) {
 	g.mu.Lock()
