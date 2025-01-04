@@ -227,7 +227,7 @@ func (g *Game) skipNextTurn() {
 	nextPlayer := g.getNextPlayer()
 	g.Network.SendInfoMessage(nextPlayer, "Your turn is SKIPPED")
 
-	g.swtichtoNextPlayer()
+	g.switchtoNextPlayer()
 }
 
 // declareWinner declares the winner of the game
@@ -285,7 +285,7 @@ func (g *Game) dealwithActionCards(card game.Card) {
 	}
 }
 
-func (g *Game) swtichtoNextPlayer() {
+func (g *Game) switchtoNextPlayer() {
 	integerDirection := convertDirectionToInteger(g.GameDirection)
 	g.CurrentTurn = (g.CurrentTurn + integerDirection) % len(g.Players)
 	if g.CurrentTurn < 0 {
