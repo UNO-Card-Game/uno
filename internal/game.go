@@ -25,7 +25,7 @@ type Game struct {
 	GameDirection    bool
 	ActivePlayer     *game.Player //pointer to active player
 	mu               sync.Mutex
-	GameTopCard      *game.Card // Top card of the game
+	TopCard          game.Card // Top card of the game
 	GameFirstMove    bool
 	Network          Network
 }
@@ -37,7 +37,7 @@ func NewGame() *Game {
 			Cards: make([]game.Card, 0), // Initialize the Cards slice
 		},
 	}
-	topcard := &gameDeck.Cut(1)[0]
+	topcard := gameDeck.Cut(1)[0]
 	var (
 		game = &Game{
 			Players:          make([]*game.Player, 0),
@@ -45,7 +45,7 @@ func NewGame() *Game {
 			DisposedGameDeck: disposedGameDeck,
 			GameStarted:      false,
 			GameDirection:    false,
-			GameTopCard:      topcard,
+			TopCard:          topcard,
 			Network:          *NewNetwork(),
 		}
 	)
@@ -77,7 +77,7 @@ func (g *Game) NextTurn() {
 	}
 
 	nextPlayer := g.Players[nextTurn]
-	topCard := g.GameTopCard
+	topCard := g.TopCard
 	playableCard := nextPlayer.HasPlayableCard(topCard)
 	if !playableCard {
 		// Draw a card from the deck
@@ -131,7 +131,7 @@ func (g *Game) PlayCard(player *game.Player, cardIdx int, newColorStr ...string)
 			// Add the card to the disposed deck
 			disposedCard := player.Deck.RemoveCard(cardIdx)
 			g.DisposedGameDeck.AddCard(disposedCard)
-			g.GameTopCard = &card
+			g.TopCard = card
 
 			g.Network.BroadcastInfoMessage(fmt.Sprintf("%s played %s and changed the color to %s", player.Name, card.LogCard(), newColor))
 
@@ -160,7 +160,7 @@ func (g *Game) PlayCard(player *game.Player, cardIdx int, newColorStr ...string)
 		// Add the card to the disposed deck
 		disposedCard := player.Deck.RemoveCard(cardIdx)
 		g.DisposedGameDeck.AddCard(disposedCard)
-		g.GameTopCard = &disposedCard
+		g.TopCard = disposedCard
 
 		// Move to the next turn
 		g.Network.SendInfoMessage(player, "Your turn is over.")
@@ -188,7 +188,7 @@ func (g *Game) IsValidMove(playedCard game.Card, player *game.Player) bool {
 	}
 
 	// If the played card matches the color or rank of the top card, it's a valid move
-	return playedCard.IsSameColor(*g.GameTopCard) || playedCard.IsSameRank(*g.GameTopCard)
+	return playedCard.IsSameColor(g.TopCard) || playedCard.IsSameRank(g.TopCard)
 }
 
 func (g *Game) PerformDrawAction(player *game.Player, card_count int) {
@@ -328,7 +328,7 @@ func (g *Game) SyncPlayer(p *game.Player) {
 		return
 	}
 
-	if g.GameTopCard == nil {
+	if g.TopCard == nil {
 		log.Printf("GameTopCard is nil; cannot sync player %s", p.Name)
 		return
 	}
@@ -347,7 +347,7 @@ func (g *Game) SyncPlayer(p *game.Player) {
 	dto := dtos.SyncDTO{
 		Player: *p,
 		Game: dtos.GameState{
-			Topcard: *g.GameTopCard,
+			Topcard: g.TopCard,
 			Turn:    activePlayer.Name,
 			Reverse: g.GameDirection,
 		},
