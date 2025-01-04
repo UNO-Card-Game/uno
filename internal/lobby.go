@@ -5,7 +5,6 @@ import (
 	"math/rand"
 	"net/http"
 	"strconv"
-	"sync"
 	"time"
 	"uno/models/dtos"
 	"uno/models/game"
@@ -15,12 +14,12 @@ import (
 
 // Room represents a game room
 type Room struct {
-	id         int  `json:"id"`
-	game       Game `json:"game"`
-	maxPlayers int  `json:"max_players"`
+	id         int
+	game       Game
+	maxPlayers int
 }
 
-const MAX_ROOMS = 100
+const MAX_ROOMS = 1
 
 var rooms map[int]*Room
 
@@ -68,17 +67,17 @@ func CreateRoomHandler(w http.ResponseWriter, r *http.Request) {
 	player := AddPlayerToRoom(&w, roomId, playerName)
 
 	// Respond with the room id
+	conn := UpgradeWebsocket(w, r, room)
+	game.Network.AddClient(*player, conn)
+
 	dto := dtos.ConnectionDTO{
-		playerName,
-		room.id,
-		maxPlayers,
-		room.game.getAllPlayers(),
+		PlayerName: playerName,
+		RoomID: room.id,
+		MaxPlayers: maxPlayers,
+		Players: room.game.getAllPlayers(),
 	}
-	res := dto.Serialize()
-	conn := UpgradeWebsocket(w, r, *room)
-	game.Network.clients[*player] = conn
-	game.Network.locks[*player] = &sync.Mutex{}
-	conn.WriteMessage(websocket.TextMessage, res)
+	conn.WriteMessage(websocket.TextMessage, dto.Serialize())
+
 	game.Network.ListenToClient(player, room)
 
 }
@@ -102,15 +101,14 @@ func JoinRoomHandler(w http.ResponseWriter, r *http.Request) {
 	room := rooms[roomId]
 	game := &room.game
 	player := AddPlayerToRoom(&w, roomId, playerName)
-	conn := UpgradeWebsocket(w, r, *room)
-	game.Network.clients[*player] = conn
-	game.Network.locks[*player] = &sync.Mutex{}
+	conn := UpgradeWebsocket(w, r, room)
+	game.Network.AddClient(*player, conn)
 
 	dto := dtos.ConnectionDTO{
-		playerName,
-		room.id,
-		room.maxPlayers,
-		room.game.getAllPlayers(),
+		PlayerName: playerName,
+		RoomID: room.id,
+		MaxPlayers: room.maxPlayers,
+		Players: room.game.getAllPlayers(),
 	}
 	conn.WriteMessage(websocket.TextMessage, dto.Serialize())
 
@@ -134,7 +132,7 @@ func AddPlayerToRoom(w *http.ResponseWriter, roomId int, playerName string) *gam
 	return player
 }
 
-func UpgradeWebsocket(w http.ResponseWriter, r *http.Request, room Room) *websocket.Conn {
+func UpgradeWebsocket(w http.ResponseWriter, r *http.Request, room *Room) *websocket.Conn {
 	conn, err := room.game.Network.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		fmt.Println("Error upgrading to WebSocket:", err)
