@@ -45,10 +45,10 @@ func NewGame() *Game {
 			DisposedGameDeck: disposedGameDeck,
 			GameStarted:      false,
 			GameDirection:    false,
-			TopCard:          *gameDeck.GetStartCard(),
 			Network:          *NewNetwork(),
 		}
 	)
+	game.SetTopCard(*gameDeck.GetStartCard())
 	return game
 }
 
@@ -118,7 +118,14 @@ func (g *Game) PlayCard(p *game.Player, index int, newColor string) {
 
 	switch {
 	case card.Type() == "action-card-no-color":
-		g.SetTopCard(card, color.Color(newColor))
+		parsedColor, err := color.ParseColor(newColor)
+		if err != nil {
+			log.Println("newColor: ", newColor)
+			log.Println("parsedColor: ", parsedColor)
+			g.Network.SendInfoMessage(p, "Invalid color. Try again.")
+			return
+		}
+		g.SetTopCard(card, parsedColor)
 		g.DisposedGameDeck.AddCard(p.Deck.RemoveCard(index))
 		g.Network.BroadcastInfoMessage(fmt.Sprintf("%s played %s and changed the color to %s", p.Name, card.LogCard(), newColor))
 
@@ -153,22 +160,12 @@ func (g *Game) SetTopCard(card game.Card, color ...color.Color) {
 }
 
 func (g *Game) IsValidMove(playedCard game.Card, player *game.Player) bool {
-	// Check if it's the first move of the game and the player is active
-	if player == g.ActivePlayer {
-		if playedCard.Type() == "action-card-no-color" {
-			return true
-		}
-		if g.GameFirstMove {
-			g.GameFirstMove = false // First card will not check deck's top card
-			return true
-		}
-	}
-
-	// If it's not the active player's turn, disallow move
 	if player != g.ActivePlayer {
 		return false
 	}
-
+	if g.TopCard.Type() == "action-card-no-color" {
+		return playedCard.Color == g.TopColor
+	}
 	// If the played card matches the color or rank of the top card, it's a valid move
 	return playedCard.IsSameColor(g.TopCard) || playedCard.IsSameRank(g.TopCard)
 }
