@@ -57,6 +57,17 @@ func (gd *GameDeck) Cut(n int) []Card {
 	return cutCards
 }
 
+func (gd *GameDeck) GetStartCard() *Card {
+    for i, card := range gd.Cards {
+        if card.Type() == "number-card" {
+            // Remove the card from the deck
+            gd.Cards = append(gd.Cards[:i], gd.Cards[i+1:]...)
+            return &card
+        }
+    }
+	return nil
+}
+
 func (gd *GameDeck) TopCard() (*Card, error) {
 	if len(gd.Cards) == 0 {
 		return nil, errors.New("game deck is empty")

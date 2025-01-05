@@ -19,7 +19,20 @@ type Room struct {
 	maxPlayers int
 }
 
-const MAX_ROOMS = 1
+func NewRoom(maxPlayers int) *Room {
+	roomId := generateID()
+
+	r := &Room{
+		id:         roomId,
+		game:       *NewGame(),
+		maxPlayers: maxPlayers,
+	}
+	r.game.Room = r
+	rooms[roomId] = r
+	return r
+}
+
+const MAX_ROOMS = 100
 
 var rooms map[int]*Room
 
@@ -52,19 +65,10 @@ func CreateRoomHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid max_players parameter", http.StatusBadRequest)
 		return
 	}
+	room := NewRoom(maxPlayers)
 
-	// Generate a unique id for the room if not provided
-	roomId := generateID()
-
-	// Create a new room and add it to the rooms map
-	room := &Room{
-		id:         roomId,
-		game:       *NewGame(),
-		maxPlayers: maxPlayers,
-	}
-	rooms[roomId] = room
 	game := &room.game
-	player := AddPlayerToRoom(&w, roomId, playerName)
+	player := AddPlayerToRoom(&w, room.id, playerName)
 
 	// Respond with the room id
 	conn := UpgradeWebsocket(w, r, room)
