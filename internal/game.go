@@ -60,6 +60,7 @@ func (g *Game) AddPlayer(player *game.Player) {
 }
 
 func (g *Game) NextTurn() {
+	g.ActivePlayer.Drawn = false
 	//check for Game winner
 	if g.ActivePlayer.Deck.NumberOfCards() == 0 {
 		g.declareWinner(g.ActivePlayer)
@@ -76,37 +77,13 @@ func (g *Game) NextTurn() {
 		nextTurn += len(g.Players)
 	}
 
-	nextPlayer := g.Players[nextTurn]
-	topCard := g.TopCard
-	playableCard := nextPlayer.HasPlayableCard(topCard)
-	if !playableCard {
-		// Draw a card from the deck
-		if g.GameDeck.NumberOfCards() == 0 {
-			// If the game deck is empty, reshuffle the disposed deck
-			g.ShuffleDiscardPileToDeck()
-		}
-		g.PerformDrawAction(g.getNextPlayer(), 1) //Draw 1 card
-		playableCard = nextPlayer.HasPlayableCard(topCard)
-
-		// If the player still doesn't have a playable card after drawing, skip their turn
-		if !playableCard {
-			g.Network.SendInfoMessage(nextPlayer, "You don't have a playable card")
-			g.skipNextTurn()
-			g.NextTurn() // Call NextTurn again to move to the next player
-			return
-		}
-
-	}
-	g.CurrentTurn = nextTurn
-	g.ActivePlayer = g.Players[g.CurrentTurn]
+	g.SetActivePlayer(nextTurn)
 	g.Network.SendInfoMessage(g.ActivePlayer, "It is your turn.")
-
 }
 func (g *Game) Start() {
 	// Start the first player's turn
-	g.CurrentTurn = 0
 	g.GameFirstMove = true
-	g.ActivePlayer = g.Players[g.CurrentTurn]
+	g.SetActivePlayer(0)
 	g.GameStarted = true
 }
 
@@ -120,8 +97,6 @@ func (g *Game) PlayCard(p *game.Player, index int, newColor string) {
 	case card.Type() == "action-card-no-color":
 		parsedColor, err := color.ParseColor(newColor)
 		if err != nil {
-			log.Println("newColor: ", newColor)
-			log.Println("parsedColor: ", parsedColor)
 			g.Network.SendInfoMessage(p, "Invalid color. Try again.")
 			return
 		}
@@ -142,11 +117,16 @@ func (g *Game) PlayCard(p *game.Player, index int, newColor string) {
 		g.Network.BroadcastInfoMessage(fmt.Sprintf("%s played %s", p.Name, card.LogCard()))
 		g.DisposedGameDeck.AddCard(p.Deck.RemoveCard(index))
 		g.NextTurn()
-		log.Println("Turn after reverse: ", g.ActivePlayer.Name)
 
 	default:
 		g.Network.SendInfoMessage(p, "Invalid move. Wrong card or wrong player. Try again.")
 	}
+}
+
+
+func(g *Game) SetActivePlayer(index int) {
+	g.CurrentTurn = index
+	g.ActivePlayer = g.Players[index]
 }
 
 func (g *Game) SetTopCard(card game.Card, color ...color.Color) {
@@ -254,6 +234,7 @@ func (g *Game) dealwithActionCards(card game.Card) {
 		g.skipNextTurn()
 	case "draw_2":
 		g.PerformDrawAction(g.getNextPlayer(), 2)
+		g.skipNextTurn()
 	case "reverse":
 		log.Println("game direction will be reversed")
 		log.Println("Current Turn: ", g.ActivePlayer.Name)
@@ -289,8 +270,11 @@ func (g *Game) HandleCommand(data []byte, player *game.Player) {
 		}
 		g.SyncAllPlayers()
 	case *commands.DrawCardComamnd:
-		if g.ActivePlayer == player {
+		if (g.ActivePlayer == player && player.Drawn == false){
 			g.PerformDrawAction(player, 1)
+			player.Drawn = true
+		}
+		if (!g.ActivePlayer.HasPlayableCard(g.TopCard)) {
 			g.NextTurn()
 		}
 		g.SyncAllPlayers()

@@ -8,12 +8,14 @@ import (
 type Player struct {
 	Name string
 	*Deck
+	Drawn bool
 }
 
 func NewPlayer(name string) *Player {
 	player := &Player{
 		Name: name,
 		Deck: NewDeck(),
+		Drawn: false,
 	}
 	return player
 }
