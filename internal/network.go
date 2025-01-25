@@ -166,10 +166,7 @@ func (n *Network) SendMessage(p *game.Player, message []byte) error {
 }
 
 func (n *Network) SendInfoMessage(p *game.Player, message string) {
-	if p == nil {
-		fmt.Println("Error: player does not exist")
-		return
-	}
+
 	dto := dtos.InfoDTO{Message: message}
 	n.SendMessage(p, dto.Serialize())
 }
