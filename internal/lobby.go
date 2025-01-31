@@ -35,6 +35,7 @@ func NewRoom(maxPlayers int) *Room {
 const (
 	ROOM_START_INDEX = 1000
 	ROOM_END_INDEX   = 9999
+	MAX_ROOMS = ROOM_END_INDEX - ROOM_START_INDEX
 )
 
 var rooms map[int]*Room
