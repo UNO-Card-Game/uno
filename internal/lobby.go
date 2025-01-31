@@ -32,7 +32,10 @@ func NewRoom(maxPlayers int) *Room {
 	return r
 }
 
-const MAX_ROOMS = 100
+const (
+	ROOM_START_INDEX = 1000
+	ROOM_END_INDEX   = 9999
+)
 
 var rooms map[int]*Room
 
@@ -147,6 +150,6 @@ func UpgradeWebsocket(w http.ResponseWriter, r *http.Request, room *Room) *webso
 
 // Generate a unique room id
 func generateID() int {
-	rand.Seed(time.Now().UnixNano())
-	return rand.Intn(MAX_ROOMS)
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	return ROOM_START_INDEX + r.Intn(ROOM_END_INDEX-ROOM_START_INDEX+1)
 }
