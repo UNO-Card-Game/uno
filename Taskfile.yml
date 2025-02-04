@@ -4,7 +4,7 @@ env:
   PORT: "8000"
 
 tasks:
-  build:server:
+  build:binary:
     desc: "Build the server binary"
     cmds:
       - if [ "$(go env GOOS)" = "windows" ]; then
@@ -19,7 +19,7 @@ tasks:
       - docker buildx create --use
       - docker buildx build --platform linux/amd64,linux/arm64 -t uno-server:latest .
     deps:
-      - build:server
+      - build:binary
 
   run:server:
     desc: "Run the server"
@@ -30,9 +30,9 @@ tasks:
         bin/server;
         fi
     deps:
-      - build:server
+      - build:binary
 
-  debug:server:
+  debug:
     desc: "Run the server in debug mode"
     cmds:
       - if [ "$(go env GOOS)" = "windows" ]; then
@@ -41,4 +41,4 @@ tasks:
         dlv exec bin/server --headless --listen=:2345 --api-version=2;
         fi
     deps:
-      - build:server
+      - build:binary

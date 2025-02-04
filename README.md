@@ -2,7 +2,15 @@
 
 ![UNO_Logo](https://github.com/UNO-Card-Game/uno/blob/main/assets/UNO_Logo.png?raw=true)
 
-# Uno Game Setup Guide
+This project is a backend service for a multiplayer Uno card game built in Go using WebSockets.
+It enables real-time gameplay and efficient management of concurrent sessions, making it easy for friends to connect and play together—no matter where they are.
+
+## Motivation
+The main motivation behind this project is twofold:
+- *Learning and exploration:* Explore the power of WebSockets, concurrent programming, and the Go language through a hands-on project.
+- *Play and Connect:* Create a fun and engaging game that brings friends together, even when they’re miles apart.
+
+# Game Setup Guide
 
 This guide provides step-by-step instructions to set up and run the Uno game.
 
