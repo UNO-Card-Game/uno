@@ -1,65 +1,113 @@
 # UNO Multiplayer 
 
-![UNO_Logo](https://github.com/mahimdashora/UNO-game/assets/60029463/4198de68-0a20-44ac-81a1-3cd0a459d29a)
+![UNO_Logo](https://github.com/UNO-Card-Game/uno/blob/main/assets/UNO_Logo.png?raw=true)
+
 # Uno Game Setup Guide
 
 This guide provides step-by-step instructions to set up and run the Uno game.
 
+# Description
+
+This is a backend service for a UNO card game multiplayer written in Go and based on WebSockets.
+
 # Installation
+
 ## Install [Task](https://taskfile.dev/installation/)
 ### Mac OS
 ```bash
 brew install go-task
 ```
 
-## Step 1: Define Player Names
+### pip
+```bash
+pip install go-task-bin
 
-Open the `main.go` file and define player names in the `players` slice.
-
-```go
-// Example:
-// players := []string{"Player1", "Player2", "Player3"}
 ```
-## Step 2: Build and run the server 
+### npm
+```bash
+npm install -g @go-task/cli
+```
+
+### RHEL/Fedora
+```bash
+dnf install go-task
+```
+
+## Installation of the Server
+
+### Native
+
+1. Clone the repository:
+```bash
+git clone https://github.com/mahimdashora/UNO-game.git
+cd UNO-game
+```
+
+2. Install dependencies:
+```bash
+go mod tidy
+```
+
+3. Build and run the server:
+```bash
+task build:binary
+task run:server
+```
+
+### Docker (Container)
+
+1. Clone the repository:
+```bash
+git clone https://github.com/UNO-Card-Game/uno.git
+cd UNO-game
+```
+
+2. Build the Docker image:
+```bash
+build:image
+```
+
+3. Run the Docker container:
+```bash
+docker run -p 8080:8080 uno-server:latest
+```
+
+## Step 2: Build and run the server
 ```bash
 task build:server
 ```
 ```bash
 task run:server
 ```
-## Step 3: Connect to the Server
-Install wscat package </br>
-### Windows: 
-- Install Node.js </br>
-- Open Command Prompt as an administrator. 
-- ```npm install -g wscat```
-### Mac: 
-- ```brew install node ```
-- ```npm install -g wscat```
-### Ubuntu:
-- ```sudo apt-get update```
-- ```sudo apt-get install nodejs npm```
 
+## Environment Variables
 
-To connect to the server port, use `wscat` with the following command:
+`PORT`: Set this environment variable to run the server on a specific port. Default is `8080`.
+
+Example:
 ```bash
-wscat -c ws://localhost:8080/ws
-```
-To create Game Room lobby , use the following command:
-```bash
-wscat -c "ws://localhost:8080/create?player_name=[NAME]&max_players=[MAX_PLAYER_COUNT]"
-wscat -c "ws://localhost:8080/create?player_name=Alice&max_players=2"
-```
-To JOIN Game Room lobby , use the following command:
-```bash
-wscat -c "ws://localhost:8080/join?player_name=[NAME]&mroom_id=[ROOM_ID_NUMBER]"
-wscat -c "ws://localhost:8080/join?player_name=Bob&room_id=33"
+export PORT=8080
+task run:server
 ```
 
-- Replace `8080` with your specific port number if needed.
-- Enter the player name correctly when prompted.
-- Wait for your turn to play.
-### Use commands 
-1. ```playcard <cardIndex> <NewColor>``` to play and <NewColor> arg is valid only for WILD and DRAW_4 </br>
-2. ```showcards``` to see cards in hand and their index </br>
-3. ```topcard``` to see top card which was last played in the game deck</br>
+Replace `8080` with your specific port number if needed.
+
+## Test WebSockets with Postman
+
+1. Open Postman and create a new WebSocket request.
+2. Enter the WebSocket URL: `ws://localhost:8080/ws`
+3. To create a Game Room lobby, use the following URL:
+```plaintext
+ws://localhost:8080/create?player_name=[NAME]&max_players=[MAX_PLAYER_COUNT]
+```
+Example:
+```plaintext
+ws://localhost:8080/create?player_name=Alice&max_players=2
+```
+4. To join a Game Room lobby, use the following URL:
+```plaintext
+ws://localhost:8080/join?player_name=Bob&room_id=1234
+```
+```plaintext
+ws://localhost:8080/join?player_name=Bob&room_id=1234
+```
