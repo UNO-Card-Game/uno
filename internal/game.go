@@ -192,7 +192,6 @@ func (g *Game) skipNextTurn() {
 
 // declareWinner declares the winner of the game
 func (g *Game) declareWinner(winner *game.Player) {
-
 	for _, p := range g.Players {
 		g.Network.SendInfoMessage(p, fmt.Sprintf("GAME OVER !  %sHAS WON THE GAME!! ,CLOSING CONNECTION ", winner.Name))
 		g.Network.CloseConnection(p)
