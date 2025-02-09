@@ -347,7 +347,6 @@ func (g *Game) SyncAllPlayers() {
 
 		go func(player *game.Player) {
 			defer wg.Done()
-
 			g.SyncPlayer(player)
 		}(playerPtr)
 	}
