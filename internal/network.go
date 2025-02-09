@@ -166,7 +166,6 @@ func (n *Network) SendMessage(p *game.Player, message []byte) error {
 }
 
 func (n *Network) SendInfoMessage(p *game.Player, message string) {
-
 	dto := dtos.InfoDTO{Message: message}
 	n.SendMessage(p, dto.Serialize())
 }
