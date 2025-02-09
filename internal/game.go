@@ -341,12 +341,8 @@ func (g *Game) SyncPlayer(p *game.Player) {
 }
 
 func (g *Game) SyncAllPlayers() {
-	// g.Network.mu.RLock() // Lock read access to players and clients
-	// defer g.Network.mu.RUnlock()
 	var wg sync.WaitGroup
-
 	for _, playerPtr := range g.Players {
-
 		wg.Add(1)
 
 		go func(player *game.Player) {
