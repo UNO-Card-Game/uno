@@ -6,8 +6,8 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "8000:8000"
     environment:
-      - PORT=8080
+      - PORT=8000
     restart: always
     container_name: uno_server
