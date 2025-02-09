@@ -48,7 +48,7 @@ func (n *Network) RemoveClient(player game.Player) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	delete(n.clients, player)
-	//log.Printf("%s Player is removed from map", player.Name)
+	log.Printf("%s Player is removed from map", player.Name)
 }
 
 func (n *Network) GetClient(player game.Player) (*websocket.Conn, bool) {
