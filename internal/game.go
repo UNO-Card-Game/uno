@@ -272,7 +272,7 @@ func (g *Game) HandleCommand(data []byte, player *game.Player) {
 			player.Drawn = true
 		}
 		// Check if the player has a playable card (including the drawn one)
-		if player.HasPlayableCard(g.TopCard) {
+		if player.HasPlayableCard(g.TopCard, g.TopColor) {
 			player.Drawn = false //To make sure After getting playable card the turn isn't skipped
 			g.Network.SendInfoMessage(player, "It is still your turn.")
 		} else {
