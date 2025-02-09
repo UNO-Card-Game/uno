@@ -123,6 +123,7 @@ func (g *Game) PlayCard(p *game.Player, index int, newColor string) {
 	}
 }
 
+
 func (g *Game) SetActivePlayer(index int) {
 	g.CurrentTurn = index
 	g.ActivePlayer = g.Players[index]
