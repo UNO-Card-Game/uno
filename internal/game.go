@@ -260,7 +260,6 @@ func (g *Game) HandleCommand(data []byte, player *game.Player) {
 
 	switch c := cmd.(type) {
 	case *commands.SyncCommand:
-
 		g.SyncPlayer(player)
 	case *commands.PlayCardCommand:
 		if g.ActivePlayer == player {
